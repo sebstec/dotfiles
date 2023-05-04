@@ -6,8 +6,8 @@ window:
   decorations: full 
   opacity: 1.0
   gtk_theme_variant: none 
-  decorations: none 
-  opacity: 0.9
+  decorations: none
+  opacity: 0.75
 
 key_bindings:
   - { key: 0,   mods: Alt, command: {program: "alacritty", args: ["-e", "vttest"]}}
@@ -18,7 +18,7 @@ key_bindings:
 #    - --login
 
 import:
- - ~/.config/alacritty-themes/themes/themes/iterm.yaml
+ - ~/.config/alacritty-theme/themes/iterm.yaml
 
 # Import additional configuration files
 #

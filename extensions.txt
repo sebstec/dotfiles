@@ -1,0 +1,5 @@
+appindicator
+popshell
+blurmyshell
+vitals
+(user themes)

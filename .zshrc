@@ -1,3 +1,18 @@
+# (S)
+daheim="044"
+arbeit="056"
+
+case "$HOSTNAME" in
+    sbfedh0)
+        color=$daheim
+        ;;
+    sbfedw0)
+        color=$arbeit
+        ;;
+    *)
+        color=$daheim
+        ;;
+esac
 
 # The following lines were added by compinstall
 
@@ -105,7 +120,7 @@ configure_prompt() {
     [ "$EUID" -eq 0 ] && prompt_symbol=💀
     case "$PROMPT_ALTERNATIVE" in
         twoline)
-            PROMPT=$'%F{%(#.056.green)}┌──${debian_chroot:+($debian_chroot)─}${VIRTUAL_ENV:+($(basename $VIRTUAL_ENV))─}(%B%F{%(#.red.056)}%n'$prompt_symbol$'%m%b%F{%(#.056.green)})-[%B%F{reset}%(6~.%-1~/…/%4~.%5~)%b%F{%(#.056.green)}]\n└─%B%(#.%F{red}#.%F{056})%b%F{reset}'
+            PROMPT=$'%F{%(#.'$color$'.green)}┌──${debian_chroot:+($debian_chroot)─}${VIRTUAL_ENV:+($(basename $VIRTUAL_ENV))─}(%B%F{%(#.red.'$color$')}%n'$prompt_symbol$'%m%b%F{%(#.'$color$'.green)})-[%B%F{reset}%(6~.%-1~/…/%4~.%5~)%b%F{%(#.'$color$'.green)}]\n└─%B%(#.%F{red}#.%F{'$color$'})%b%F{reset}'
             # Right-side prompt with exit codes and background processes
             RPROMPT=$'%(?.. %? %F{red}%B⨯%b%F{reset})%(1j. %j %F{yellow}%B⚙%b%F{reset}.)'
             ;;
@@ -277,7 +292,7 @@ export EDITOR="/usr/bin/nvim"
 setup_git_prompt() {
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         unset git_prompt
-        git_prompt="%F{056}$%f "
+        git_prompt="%F{$color}$%f "
         return 0
     fi
 
@@ -305,6 +320,8 @@ setup_git_prompt() {
     git_branch="${git_branch:-no branch}"
 
                             #253
-    git_prompt="%F{green}─[%F{103}%B${git_branch}${git_status_dirty}${git_status_stash}%F{green}]%F{056}$%f "
+    git_prompt="%F{green}─[%F{103}%B${git_branch}${git_status_dirty}${git_status_stash}%F{green}]%F{$color}$%f "
 
 }
+
+#farbe home: 044, farbe arbeit: 056

@@ -324,4 +324,6 @@ setup_git_prompt() {
 
 }
 
+alias protonvpn='protonvpn-cli'
+alias pvpn='protonvpn-cli'
 #farbe home: 044, farbe arbeit: 056

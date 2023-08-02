@@ -64,6 +64,7 @@ bindkey '^[[6~' end-of-buffer-or-history          # page down
 bindkey '^[[H' beginning-of-line                  # home
 bindkey '^[[F' end-of-line                        # end
 bindkey '^[[Z' undo                               # shift + tab undo last action
+bindkey '^R' history-incremental-search-backward    # (S) activate backwrards inc search
 
 zstyle ':completion:*' auto-description 'specify: %d'
 zstyle ':completion:*' verbose true

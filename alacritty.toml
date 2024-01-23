@@ -1,4 +1,4 @@
-import = ["/home/sebste/.config/alacritty-theme/themes/iterm.toml"]
+import = ["~/.config/alacritty-theme/themes/iterm.toml"]
 
 [[keyboard.bindings]]
 key = 0

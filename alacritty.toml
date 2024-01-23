@@ -1,0 +1,18 @@
+import = ["/home/sebste/.config/alacritty-theme/themes/iterm.toml"]
+
+[[keyboard.bindings]]
+key = 0
+mods = "Alt"
+
+[keyboard.bindings.command]
+args = ["-e", "vttest"]
+program = "alacritty"
+
+[window]
+decorations = "none"
+#gtk_theme_variant = "none"
+opacity = 1.0
+
+[window.padding]
+x = 5
+y = 5

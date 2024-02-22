@@ -290,6 +290,7 @@ fi
 
 #ab hier meins
 export EDITOR="/usr/bin/nvim"
+export PATH=$PATH:/usr/local/go/bin
 
 setup_git_prompt() {
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then

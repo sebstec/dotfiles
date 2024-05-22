@@ -1,4 +1,5 @@
-import = ["~/.config/alacritty-theme/themes/iterm.toml"]
+# import = ["~/.config/alacritty-theme/themes/iterm.toml"]
+import = ["~/.config/alacritty-theme/themes/baitong.toml"]
 
 [[keyboard.bindings]]
 key = 0

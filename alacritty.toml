@@ -1,5 +1,5 @@
-# import = ["~/.config/alacritty-theme/themes/iterm.toml"]
-import = ["~/.config/alacritty-theme/themes/baitong.toml"]
+import = ["~/.config/alacritty-theme/themes/iterm.toml"]
+# import = ["~/.config/alacritty-theme/themes/baitong.toml"]
 
 [[keyboard.bindings]]
 key = 0
@@ -10,9 +10,9 @@ args = ["-e", "vttest"]
 program = "alacritty"
 
 [window]
-decorations = "none"
-#gtk_theme_variant = "none"
-opacity = 1.0
+# decorations = "none"
+# gtk_theme_variant = "none"
+opacity = 0.77
 
 [window.padding]
 x = 5

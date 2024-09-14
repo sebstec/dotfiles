@@ -291,6 +291,7 @@ fi
 #ab hier meins
 export EDITOR="/usr/bin/nvim"
 export PATH=$PATH:/usr/local/go/bin
+export PRETTIERD_DEFAULT_CONFIG=/home/sebste/.config/nvim/lua/custom/plugins/.prettierrc
 
 setup_git_prompt() {
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -329,4 +330,16 @@ setup_git_prompt() {
 
 alias protonvpn='protonvpn-cli'
 alias pvpn='protonvpn-cli'
+alias ch311='wg-quick up ch311'
+alias ch311d='wg-quick down ch311'
+alias ch322='wg-quick up ch322'
+alias ch322d='wg-quick down ch322'
+alias ch333='wg-quick up ch333'
+alias ch333d='wg-quick down ch333'
+alias de235='wg-quick up de235'
+alias de235d='wg-quick down de235'
+alias de432='wg-quick up de432'
+alias de432d='wg-quick down de432'
+alias de433='wg-quick up de433'
+alias de433d='wg-quick down de433'
 #farbe home: 044, farbe arbeit: 056

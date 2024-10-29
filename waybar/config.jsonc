@@ -34,7 +34,7 @@
     ],
     // Modules configuration
     "hyprland/workspaces": {
-        "format": "{icon} {id}",
+        "format": "{id}: {icon} ",
         "on-click": "activate",
         "format-icons": {
             "1": "",

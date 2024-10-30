@@ -16,7 +16,7 @@
         // "hyprland/window",
         // "mpd",
         // "idle_inhibitor",
-        // "pulseaudio",
+        "pulseaudio",
         "network",
         "power-profiles-daemon",
         "cpu",
@@ -208,12 +208,14 @@
     },
     "network": {
         // "interface": "wlp2*", // (Optional) To force the use of this interface
-        "format-wifi": "{essid} ({signalStrength}%) ",
-        "format-ethernet": "{ipaddr}/{cidr} ",
+        "format": "no connection ⚠",
+        "format-wifi": "{essid} ({signalStrength}%)  {bandwidthUpBytes}↑ {bandwidthDownBytes}↓",
+        "format-ethernet": "{ipaddr}/{cidr}  {bandwidthUpBytes}↑ {bandwidthDownBytes}↓",
         "tooltip-format": "{ifname} via {gwaddr} ",
         "format-linked": "{ifname} (No IP) ",
         "format-disconnected": "Disconnected ⚠",
         "format-alt": "{ifname}: {ipaddr}/{cidr}",
+        "interval": 2,
         "on-click-right": "nm-applet"
     },
     "pulseaudio": {

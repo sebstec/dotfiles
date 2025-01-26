@@ -342,4 +342,9 @@ alias de432='wg-quick up de432'
 alias de432d='wg-quick down de432'
 alias de433='wg-quick up de433'
 alias de433d='wg-quick down de433'
+
+# winapps
+# export LIBVIRT_DEFAULT_URI="qemu:///system"
+# export PATH=$PATH:/home/sebste/.local/bin
+
 #farbe home: 044, farbe arbeit: 056

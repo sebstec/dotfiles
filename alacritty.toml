@@ -1,4 +1,3 @@
-import = ["~/.config/alacritty-theme/themes/iterm.toml"]
 # import = ["~/.config/alacritty-theme/themes/baitong.toml"]
 
 [[keyboard.bindings]]
@@ -10,7 +9,7 @@ args = ["-e", "vttest"]
 program = "alacritty"
 
 [window]
-# decorations = "none"
+decorations = "none"
 # gtk_theme_variant = "none"
 opacity = 0.77
 # opacity = 1.00
@@ -18,3 +17,6 @@ opacity = 0.77
 [window.padding]
 x = 5
 y = 5
+
+[general]
+import = ["~/.config/alacritty-theme/themes/iterm.toml"]

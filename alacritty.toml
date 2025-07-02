@@ -11,7 +11,7 @@ program = "alacritty"
 [window]
 decorations = "none"
 # gtk_theme_variant = "none"
-opacity = 0.77
+opacity = 0.95
 # opacity = 1.00
 
 [window.padding]

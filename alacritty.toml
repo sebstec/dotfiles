@@ -1,5 +1,3 @@
-# import = ["~/.config/alacritty-theme/themes/baitong.toml"]
-
 [[keyboard.bindings]]
 key = 0
 mods = "Alt"
@@ -18,5 +16,14 @@ opacity = 0.95
 x = 5
 y = 5
 
+[cursor]
+[cursor.style]
+shape = 'underline'
+blinking = 'Off'
+
+[font.normal]
+family = 'Adwaita Mono'
+
 [general]
 import = ["~/.config/alacritty-theme/themes/iterm.toml"]
+# import = ["~/.config/alacritty-theme/themes/baitong.toml"]

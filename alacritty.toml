@@ -22,7 +22,7 @@ shape = 'underline'
 blinking = 'Off'
 
 [font.normal]
-family = 'Adwaita Mono'
+family = 'SauceCodePro Nerd Font'
 
 [general]
 import = ["~/.config/alacritty-theme/themes/iterm.toml"]

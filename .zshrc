@@ -343,6 +343,8 @@ alias de432d='wg-quick down de432'
 alias de433='wg-quick up de433'
 alias de433d='wg-quick down de433'
 
+alias jour='nvim journal_$(date -I).md'
+
 # fzf zsh completion
 eval "$(fzf --zsh)"
 export FZF_DEFAULT_OPTS="--height=40% --layout=reverse --border --info=inline --multi --preview-window=:hidden --preview '([[ -f {} ]] && (bat --style=numbers --color=always {} || cat {})) || ([[ -d {} ]] && (tree -C {} | less)) || echo {} 2> /dev/null | head -200' --bind '?:toggle-preview'"

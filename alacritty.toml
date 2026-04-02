@@ -10,6 +10,7 @@ program = "alacritty"
 decorations = "none"
 # gtk_theme_variant = "none"
 opacity = 0.95
+# opacity = 0.55
 # opacity = 1.00
 
 [window.padding]
@@ -27,3 +28,4 @@ family = 'SauceCodePro Nerd Font'
 [general]
 import = ["~/.config/alacritty-theme/themes/iterm.toml"]
 # import = ["~/.config/alacritty-theme/themes/baitong.toml"]
+# import = ["~/.config/alacritty-theme/themes/ayu_light.toml"]

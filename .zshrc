@@ -117,7 +117,8 @@ fi
 
 configure_prompt() {
     #prompt_symbol=㉿
-    prompt_symbol="🗡 "
+    # prompt_symbol="🗡 "
+    prompt_symbol="🗡️"
     # Skull emoji for root terminal
     [ "$EUID" -eq 0 ] && prompt_symbol=💀
     case "$PROMPT_ALTERNATIVE" in
@@ -354,3 +355,4 @@ export FZF_DEFAULT_OPTS="--height=40% --layout=reverse --border --info=inline --
 # export PATH=$PATH:/home/sebste/.local/bin
 
 #farbe home: 044, farbe arbeit: 056
+alias docker='sudo docker'

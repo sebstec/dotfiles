@@ -350,6 +350,25 @@ alias jour='nvim journal_$(date -I).md'
 eval "$(fzf --zsh)"
 export FZF_DEFAULT_OPTS="--height=40% --layout=reverse --border --info=inline --multi --preview-window=:hidden --preview '([[ -f {} ]] && (bat --style=numbers --color=always {} || cat {})) || ([[ -d {} ]] && (tree -C {} | less)) || echo {} 2> /dev/null | head -200' --bind '?:toggle-preview'"
 
+# vi mode always
+bindkey -v
+export KEYTIMEOUT=1  # faster Esc response (default is 40 = 400ms)
+
+# Change cursor shape by mode (works in most terminals)
+function zle-keymap-select {
+  if [[ $KEYMAP == vicmd ]]; then
+    echo -ne '\e[4 q'  # underline cursor = normal mode
+  else
+    echo -ne '\e[2 q'  # block cursor = insert mode
+  fi
+}
+zle -N zle-keymap-select
+
+# function zle-line-init {
+#   echo -ne '\e[2 q'  # block on every new prompt
+# }
+# zle -N zle-line-init
+
 # winapps
 # export LIBVIRT_DEFAULT_URI="qemu:///system"
 # export PATH=$PATH:/home/sebste/.local/bin

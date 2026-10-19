@@ -1,0 +1,16 @@
+- name: Provision Fedora workstation
+  hosts: workstation
+  gather_facts: true
+  roles:
+    - role: base
+      tags: base
+    - role: ssh
+      tags: ssh
+    - role: dotfiles
+      tags: dotfiles
+    - role: zsh
+      tags: zsh
+    - role: kitty
+      tags: kitty
+    - role: tmux
+      tags: tmux

@@ -1,0 +1,3 @@
+kitty_config_dir: "{{ workstation_home }}/.config/kitty"
+kitty_config_src: "{{ dotfiles_dest }}/kitty.conf"
+kitty_config_dest: "{{ kitty_config_dir }}/kitty.conf"

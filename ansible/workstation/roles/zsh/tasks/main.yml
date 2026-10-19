@@ -1,0 +1,12 @@
+- name: Set zsh as the login shell
+  ansible.builtin.user:
+    name: "{{ workstation_user }}"
+    shell: "{{ zsh_shell }}"
+  become: true
+
+- name: Link the zsh configuration
+  ansible.builtin.file:
+    src: "{{ zsh_config_src }}"
+    dest: "{{ zsh_config_dest }}"
+    state: link
+    force: true

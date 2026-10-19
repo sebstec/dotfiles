@@ -1,0 +1,44 @@
+- name: Check the GitHub SSH key
+  ansible.builtin.stat:
+    path: "{{ dotfiles_ssh_key }}"
+  register: dotfiles_key
+  when: not ansible_check_mode
+  no_log: true
+
+- name: Require the GitHub SSH key
+  ansible.builtin.assert:
+    that:
+      - dotfiles_key.stat.exists | default(false)
+      - dotfiles_key.stat.isreg | default(false)
+    fail_msg: "Expected {{ dotfiles_ssh_key }} to exist as a regular file on the target."
+  when: not ansible_check_mode
+
+- name: Check for an existing dotfiles clone
+  ansible.builtin.stat:
+    path: "{{ dotfiles_dest }}/.git"
+  register: dotfiles_git
+
+- name: Ask the user to clone the dotfiles repository
+  ansible.builtin.pause:
+    prompt: |
+      Clone the dotfiles repository on the target, then press Enter to continue:
+
+        git clone --branch {{ dotfiles_repo_version }} {{ dotfiles_repo_url }} {{ dotfiles_dest }}
+
+      The GitHub key at {{ dotfiles_ssh_key }} and its ssh-agent identity must be available on the target.
+  when:
+    - not dotfiles_git.stat.exists
+    - not ansible_check_mode
+
+- name: Verify the dotfiles clone
+  ansible.builtin.stat:
+    path: "{{ dotfiles_dest }}/.git"
+  register: dotfiles_clone
+  when: not ansible_check_mode
+
+- name: Require the dotfiles clone
+  ansible.builtin.assert:
+    that:
+      - dotfiles_clone.stat.isdir | default(false)
+    fail_msg: "The dotfiles clone at {{ dotfiles_dest }} is incomplete."
+  when: not ansible_check_mode

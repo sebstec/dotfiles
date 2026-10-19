@@ -1,0 +1,12 @@
+- name: Ensure the kitty configuration directory
+  ansible.builtin.file:
+    path: "{{ kitty_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Link the kitty configuration
+  ansible.builtin.file:
+    src: "{{ kitty_config_src }}"
+    dest: "{{ kitty_config_dest }}"
+    state: link
+    force: true

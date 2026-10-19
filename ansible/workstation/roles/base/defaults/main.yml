@@ -1,0 +1,12 @@
+workstation_packages:
+  - git
+  - zsh
+  - kitty
+  - tmux
+  - fzf
+  - bat
+  - tree
+  - wl-clipboard
+  - zsh-autosuggestions
+  - zsh-syntax-highlighting
+  - openssh-clients

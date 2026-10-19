@@ -6,7 +6,7 @@ case "$HOSTNAME" in
     sbfedh0)
         color=$daheim
         ;;
-    sbfedw0)
+    sbfedw*)
         color=$arbeit
         ;;
     *)
@@ -26,7 +26,7 @@ zstyle ':completion:*' menu select=long
 zstyle ':completion:*' original true
 zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p%s
 zstyle ':completion:*' substitute 1
-zstyle :compinstall filename '/home/sebste/.zshrc'
+zstyle :compinstall filename "$HOME/.zshrc"
 
 autoload -Uz compinit
 compinit
@@ -292,7 +292,7 @@ fi
 #ab hier meins
 export EDITOR="/usr/bin/nvim"
 export PATH=$PATH:/usr/local/go/bin
-export PRETTIERD_DEFAULT_CONFIG=/home/sebste/.config/nvim/lua/custom/plugins/.prettierrc
+export PRETTIERD_DEFAULT_CONFIG=$HOME/.config/nvim/lua/custom/plugins/.prettierrc
 
 setup_git_prompt() {
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then

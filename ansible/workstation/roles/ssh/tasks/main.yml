@@ -1,0 +1,67 @@
+- name: Check the control host SSH directory
+  ansible.builtin.stat:
+    path: "{{ ssh_source_dir }}"
+  delegate_to: localhost
+  become: false
+  register: ssh_source_stat
+  no_log: true
+
+- name: Require the control host SSH directory
+  ansible.builtin.assert:
+    that:
+      - ssh_source_stat.stat.exists | default(false)
+      - ssh_source_stat.stat.isdir | default(false)
+    fail_msg: "No SSH directory found at {{ ssh_source_dir }} on the control host."
+
+- name: Find control host SSH files
+  ansible.builtin.find:
+    paths:
+      - "{{ ssh_source_dir }}"
+    file_type: file
+    hidden: true
+  delegate_to: localhost
+  become: false
+  register: ssh_control_files
+  no_log: true
+
+- name: Ensure the target SSH directory
+  ansible.builtin.file:
+    path: "{{ ssh_dest_dir }}"
+    state: directory
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "0700"
+  no_log: true
+
+- name: Copy control host SSH files without overwriting authorized_keys
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ssh_dest_dir }}/{{ item.path | basename }}"
+    owner: "{{ workstation_user }}"
+    group: "{{ workstation_user }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ ssh_control_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when:
+    - item.path | basename not in ssh_excluded_files
+  no_log: true
+
+- name: Find private keys on the target
+  ansible.builtin.find:
+    paths:
+      - "{{ ssh_dest_dir }}"
+    file_type: file
+    hidden: true
+    contains: '^-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----'
+  register: ssh_private_keys
+  no_log: true
+
+- name: Require private keys to be mode 0600
+  ansible.builtin.assert:
+    that:
+      - item.mode == '0600'
+    fail_msg: "Private key {{ item.path }} must be mode 0600, found {{ item.mode }}."
+  loop: "{{ ssh_private_keys.files }}"
+  loop_control:
+    label: "{{ item.path }}"

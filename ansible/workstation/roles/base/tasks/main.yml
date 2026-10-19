@@ -1,0 +1,39 @@
+- name: Verify target is Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["distribution"] == "Fedora"
+    fail_msg: "This playbook supports Fedora only."
+
+- name: Verify the connection user
+  ansible.builtin.assert:
+    that:
+      - (ansible_user | default('')) == workstation_user
+    fail_msg: "Connect as {{ workstation_user }} instead of {{ ansible_user | default('another user') }}."
+
+- name: Read the passwd database
+  ansible.builtin.getent:
+    database: passwd
+
+- name: Verify the workstation user exists
+  ansible.builtin.assert:
+    that:
+      - workstation_user in (ansible_facts.getent_passwd | default({}))
+    fail_msg: "User {{ workstation_user }} does not exist on the target."
+
+- name: Install workstation packages
+  ansible.builtin.dnf:
+    name: "{{ workstation_packages }}"
+    state: present
+  become: true
+
+- name: Ensure the hostname resolves locally
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1\s+'
+    line: "127.0.1.1 {{ workstation_hostname }}"
+  become: true
+
+- name: Set the workstation hostname
+  ansible.builtin.hostname:
+    name: "{{ workstation_hostname }}"
+  become: true

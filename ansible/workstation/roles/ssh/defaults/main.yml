@@ -1,0 +1,5 @@
+ssh_source_dir: "{{ lookup('env', 'HOME') }}/.ssh"
+ssh_dest_dir: "{{ workstation_home }}/.ssh"
+ssh_excluded_files:
+  - authorized_keys
+  - authorized_keys2

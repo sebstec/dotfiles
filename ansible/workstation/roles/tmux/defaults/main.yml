@@ -1,0 +1,4 @@
+tmux_config_src: "{{ dotfiles_dest }}/.tmux.conf"
+tmux_config_dest: "{{ workstation_home }}/.tmux.conf"
+tmux_sessionizer_src: "{{ dotfiles_dest }}/tmux-sessionizer.sh"
+tmux_sessionizer_dest: "{{ workstation_home }}/tmux-sessionizer.sh"

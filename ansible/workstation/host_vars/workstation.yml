@@ -1,0 +1,8 @@
+workstation_user: sbw
+workstation_home: /home/sbw
+workstation_hostname: sbfedw1
+
+dotfiles_repo_url: git@github.com-cy:sebstec/dotfiles.git
+dotfiles_repo_version: master
+dotfiles_dest: "{{ workstation_home }}/dotfiles"
+dotfiles_ssh_key: "{{ workstation_home }}/.ssh/cybertech_ed25519"

@@ -1,0 +1,65 @@
+FROM ubuntu:24.04
+# Prevent interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /code
+USER root
+
+# 1. Install prerequisites
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    libgl1-mesa-dri \
+    libgl1 \
+    libglx-mesa0 \
+    libwayland-client0 \
+    libwayland-egl1 \
+    libdbus-glib-1-2 \
+    libgtk-3-0 \
+    libasound2t64 \
+    curl \
+    tmux \
+    locales \
+     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
+     && locale-gen en_US.UTF-8 \
+     && apt-get clean && rm -rf /var/lib/apt/lists/*
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+
+# TMUX
+COPY .tmux.conf /root/.tmux.conf
+COPY .tmux.conf /home/ubuntu/.tmux.conf
+
+# 2. Add Mozilla APT repository and signing key
+RUN install -d -m 0755 /etc/apt/keyrings && \
+    wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- | tee /etc/apt/keyrings/packages.mozilla.org.asc > /dev/null && \
+    echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" | tee /etc/apt/sources.list.d/mozilla.list > /dev/null
+
+# 3. Prioritize Mozilla repo over Ubuntu's Snap-transition package
+RUN echo 'Package: *' > /etc/apt/preferences.d/mozilla && \
+    echo 'Pin: origin packages.mozilla.org' >> /etc/apt/preferences.d/mozilla && \
+    echo 'Pin-Priority: 1000' >> /etc/apt/preferences.d/mozilla
+
+# 4. Install Firefox
+RUN apt-get update && apt-get install -y firefox
+
+# 5. Environment variables for Wayland
+ENV MOZ_ENABLE_WAYLAND=1
+
+# 5.1. Install Node.js 22 (LTS) and npm
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && node -v && npm -v \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 7. Make sure /code is writeable
+RUN mkdir -p /code && chown -R ubuntu:ubuntu /code
+
+USER ubuntu
+# opencode CLI
+RUN curl -fsSL https://opencode.ai/v2/install | bash -s -- --version 2.0.32
+
+ENTRYPOINT ["bash", "-c", "echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc && source ~/.bashrc && exec \"$@\"", "--"]
+CMD ["bash"]

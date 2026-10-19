@@ -1,0 +1,74 @@
+---
+description: Split logging by precise scenario cause — one reason per branch (global)
+alwaysApply: true
+---
+
+# Logging implementation — one cause per log site
+
+When adding or changing failure logging (structured app logs, audit `fail_reason_code`, metrics, alerts), **each distinct root cause gets its own branch and its own log/audit site**. Do not collapse multiple causes into one message or one reason code.
+
+## Required
+
+1. **One branch → one reason**  
+   Evaluate conditions separately (separate `if` blocks or early returns). Each branch emits its own `fail_reason_code` / log step / metric label that names **that** failure only.
+
+2. **Stable, grep-friendly identifiers**  
+   - `fail_reason_code`: snake_case, specific (`provider_missing`, `provider_disabled`, `account_sso_disabled`) — not umbrella codes in logs unless that code truly has a single cause.  
+   - Log step / event name: includes the cause (`login.callback.provider_missing` vs `login.callback.provider_disabled`).
+
+3. **Log at the site of the decision**  
+   Log immediately adjacent to the check that failed (same pattern as audit rows in OIDC). Do not log once at the end of a compound guard with a generic reason.
+
+4. **Audit and app logs stay aligned**  
+   If you add `audit.record(..., fail_reason_code=...)`, add a matching structured log with the **same** `fail_reason_code` for that branch (when the project uses structured logging helpers).
+
+5. **Context per cause**  
+   Pass IDs available **in that branch** only (`provider_id` when row exists, `account_id` when known). Do not reuse a generic payload that hides which branch fired.
+
+## Forbidden
+
+```python
+# BAD — ops cannot tell which condition failed
+if provider is None or not provider.enabled or not _account_has_sso(provider.account_id):
+    log_oidc_failure("login.callback", fail_reason_code="provider_not_enabled")
+```
+
+```python
+# BAD — reason string encodes multiple possibilities
+fail_reason_code = "gate_denied"  # when meaning is not_admin OR sso_flag_disabled OR provider_missing
+```
+
+```python
+# BAD — single catch-all log for heterogeneous early exits
+if not ready:
+    log("setup failed")  # ready = url bad OR discovery stale OR jwks empty
+```
+
+## Allowed pattern (reference)
+
+User-facing response may stay generic for security/UX; **logs and audit must still distinguish causes**:
+
+```python
+if provider is None:
+    log_oidc_failure("login.callback.provider_missing", fail_reason_code="provider_missing", ...)
+    return _fail("provider_disabled")  # generic redirect only
+
+if not provider.enabled:
+    log_oidc_failure("login.callback.provider_disabled", fail_reason_code="provider_disabled", ...)
+
+if not _account_has_sso(provider.account_id):
+    log_oidc_failure("login.callback.account_sso_disabled", fail_reason_code="account_sso_disabled", ...)
+```
+
+
+## When refactoring existing code
+
+- If you touch a compound `if A or B or C` that already logs or audits: **split the guard** and add/move log sites so each path has its own reason.  
+- Do not "simplify" separate branches into one log to reduce line count.  
+- Prefer ordered checks (cheap / no side effects first) but **never** trade away cause-specific logging.
+
+## Exceptions (narrow)
+
+- **Single homogeneous check** is fine: `if not isinstance(x, str)` → one reason `invalid_type`.  
+- **Re-raise / wrap** one underlying `reason_code` from a dedicated exception type — still one cause per log at the catch site.  
+- **User/HTTP surface** may use a broader code; **observability layer must not**.

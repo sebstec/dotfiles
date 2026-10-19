@@ -1,0 +1,5 @@
+- ripgrep
+- python mcp
+- connection to local dev env
+    - or uv (to be able to run tests)
+- ansible-playbook maybe

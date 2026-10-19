@@ -1,0 +1,21 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "instructions": [
+        "/etc/opencode/AGENTS.md",
+        "/etc/opencode/rules/*.md"
+    ],
+    "providers": {
+        "openrouter": {
+            "models": {
+                "deepseek/deepseek-v4.1-flash": {
+                    "body": {
+                        "provider": {
+                            "order": ["together", "coreweave"],
+                            "allow_fallbacks": true
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

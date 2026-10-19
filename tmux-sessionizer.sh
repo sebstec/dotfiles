@@ -3,7 +3,7 @@
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(find ~/PhpstormProjects ~/cysec/after-studies/docker ~/cysec/anwendungDigitaleTechnologien -mindepth 1 -maxdepth 1 -type d | fzf)
+    selected=$(find /tmp ~ ~/code ~/Documents ~/Downloads -mindepth 1 -maxdepth 1 -type d | fzf)
 fi
 
 if [[ -z $selected ]]; then

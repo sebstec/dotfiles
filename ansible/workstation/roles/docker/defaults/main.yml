@@ -1,0 +1,15 @@
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+docker_conflicting_packages:
+  - moby-engine
+  - podman-docker
+  - docker
+
+docker_repo_url: https://download.docker.com/linux/fedora/docker-ce.repo
+docker_repo_file: /etc/yum.repos.d/docker-ce.repo
+docker_gpg_key_url: https://download.docker.com/linux/fedora/gpg

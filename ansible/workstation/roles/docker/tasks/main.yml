@@ -1,0 +1,121 @@
+---
+- name: Verify target is Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["distribution"] == "Fedora"
+    fail_msg: "This role supports Fedora only."
+
+- name: Check for conflicting Docker packages
+  ansible.builtin.command:
+    argv:
+      - rpm
+      - -q
+      - "{{ item }}"
+  loop: "{{ docker_conflicting_packages }}"
+  loop_control:
+    label: "{{ item }}"
+  register: docker_conflicts
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require no conflicting Docker packages
+  ansible.builtin.assert:
+    that:
+      - "'is not installed' in item.stdout"
+    fail_msg: "{{ item.item }} is installed; remove it before installing Docker CE."
+  loop: "{{ docker_conflicts.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Install dnf5 plugins
+  ansible.builtin.dnf:
+    name: dnf5-plugins
+    state: present
+  become: true
+
+- name: Import the Docker GPG key
+  ansible.builtin.rpm_key:
+    key: "{{ docker_gpg_key_url }}"
+    state: present
+  become: true
+
+- name: Add the Docker CE repository
+  ansible.builtin.command:
+    argv:
+      - dnf
+      - config-manager
+      - addrepo
+      - --from-repofile
+      - "{{ docker_repo_url }}"
+    creates: "{{ docker_repo_file }}"
+  become: true
+
+- name: Check the Docker CE repository file
+  ansible.builtin.stat:
+    path: "{{ docker_repo_file }}"
+  register: docker_repo_file_stat
+
+- name: Require the Docker CE repository file
+  ansible.builtin.assert:
+    that:
+      - docker_repo_file_stat.stat.exists | default(false)
+    fail_msg: "dnf config-manager did not create {{ docker_repo_file }}."
+  when: not ansible_check_mode
+
+- name: Install Docker packages
+  ansible.builtin.dnf:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+  become: true
+  when: (not ansible_check_mode) or (docker_repo_file_stat.stat.exists | default(false))
+
+- name: Enable and start Docker
+  ansible.builtin.systemd_service:
+    name: docker
+    state: started
+    enabled: true
+  become: true
+  when: not ansible_check_mode
+
+- name: Read the Docker version
+  ansible.builtin.command:
+    cmd: docker --version
+  register: docker_version
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Read the Docker Compose version
+  ansible.builtin.command:
+    cmd: docker compose version
+  register: docker_compose_version
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify the Docker daemon
+  ansible.builtin.command:
+    cmd: docker info
+  become: true
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Read the Docker service state
+  ansible.builtin.command:
+    cmd: systemctl is-active docker
+  register: docker_service_state
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Require Docker to be installed and running
+  ansible.builtin.assert:
+    that:
+      - docker_version.rc == 0
+      - docker_compose_version.rc == 0
+      - (docker_service_state.stdout | trim) == "active"
+    fail_msg: "Docker, Compose, or the Docker service is not available."
+  when: not ansible_check_mode
+
+- name: Remind about Docker group access
+  ansible.builtin.debug:
+    msg: "Docker is installed. {{ workstation_user }} is not in the docker group; use sudo docker (the existing .zshrc alias handles this)."

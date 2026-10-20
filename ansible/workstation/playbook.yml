@@ -4,6 +4,8 @@
   roles:
     - role: base
       tags: base
+    - role: gnome_extensions
+      tags: gnome_extensions
     - role: ssh
       tags: ssh
     - role: dotfiles

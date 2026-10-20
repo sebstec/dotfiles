@@ -1,0 +1,401 @@
+---
+- name: Verify target is Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["distribution"] == "Fedora"
+    fail_msg: "This role supports Fedora only."
+
+- name: Read the GNOME Shell version
+  ansible.builtin.command:
+    cmd: gnome-shell --version
+  register: gnome_shell_version
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require GNOME Shell
+  ansible.builtin.assert:
+    that:
+      - gnome_shell_version.rc == 0
+    fail_msg: "GNOME Shell is required; this role targets Fedora Workstation."
+
+- name: Set the GNOME Shell major version
+  ansible.builtin.set_fact:
+    gnome_shell_major_version: "{{ gnome_shell_version.stdout | regex_search('([0-9]+)') }}"
+
+- name: Verify the connection user
+  ansible.builtin.assert:
+    that:
+      - (ansible_user | default('')) == workstation_user
+    fail_msg: "Connect as {{ workstation_user }} instead of {{ ansible_user | default('another user') }}."
+
+- name: Read the passwd database
+  ansible.builtin.getent:
+    database: passwd
+
+- name: Require the workstation user
+  ansible.builtin.assert:
+    that:
+      - workstation_user in (ansible_facts.getent_passwd | default({}))
+    fail_msg: "User {{ workstation_user }} does not exist on the target."
+
+- name: Install GNOME extension packages
+  ansible.builtin.dnf:
+    name: "{{ gnome_extension_packages + gnome_extension_dependencies }}"
+    state: present
+  become: true
+
+- name: Ensure the GNOME extension cache directory
+  ansible.builtin.file:
+    path: "{{ gnome_vitals_archive | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: Check for an existing Vitals extension
+  ansible.builtin.stat:
+    path: "{{ gnome_vitals_extension_dir }}/metadata.json"
+  register: gnome_vitals_installed
+
+- name: Query the Vitals extension metadata
+  ansible.builtin.uri:
+    url: "https://extensions.gnome.org/extension-info/?uuid={{ gnome_vitals_uuid }}&shell_version={{ gnome_shell_major_version }}"
+    return_content: true
+  register: gnome_vitals_info
+  check_mode: false
+  when: not gnome_vitals_installed.stat.exists
+
+- name: Require a Vitals build for the GNOME Shell version
+  ansible.builtin.assert:
+    that:
+      - ((gnome_vitals_info | default({})).get('json', {}).get('download_url') | default('', true) | length) > 0
+    fail_msg: "No Vitals build is available for GNOME Shell {{ gnome_shell_major_version }}."
+  when: not gnome_vitals_installed.stat.exists
+
+- name: Set the Vitals download URL
+  ansible.builtin.set_fact:
+    gnome_vitals_download_url: "{{ gnome_vitals_info.json.download_url if gnome_vitals_info.json.download_url.startswith('http') else 'https://extensions.gnome.org/' ~ (gnome_vitals_info.json.download_url | regex_replace('^/', '')) }}"
+  when: not gnome_vitals_installed.stat.exists
+
+- name: Download the Vitals extension
+  ansible.builtin.get_url:
+    url: "{{ gnome_vitals_download_url | default('') }}"
+    dest: "{{ gnome_vitals_archive }}"
+    mode: "0644"
+    force: false
+  when:
+    - not gnome_vitals_installed.stat.exists
+    - not ansible_check_mode
+
+- name: Install the Vitals extension
+  ansible.builtin.command:
+    argv:
+      - gnome-extensions
+      - install
+      - --force
+      - "{{ gnome_vitals_archive }}"
+  when:
+    - not gnome_vitals_installed.stat.exists
+    - not ansible_check_mode
+  changed_when: true
+
+- name: Check the Vitals extension installation
+  ansible.builtin.stat:
+    path: "{{ gnome_vitals_extension_dir }}/metadata.json"
+  register: gnome_vitals_install_check
+  when: not ansible_check_mode
+
+- name: Require the Vitals extension installation
+  ansible.builtin.assert:
+    that:
+      - gnome_vitals_install_check.stat.exists | default(false)
+    fail_msg: "Vitals was not installed at {{ gnome_vitals_extension_dir }}."
+  when: not ansible_check_mode
+
+- name: Check installed system GNOME extension directories
+  ansible.builtin.stat:
+    path: "/usr/share/gnome-shell/extensions/{{ item }}"
+  loop: "{{ gnome_extension_system_uuids }}"
+  loop_control:
+    label: "{{ item }}"
+  register: gnome_extension_dirs
+  when: not ansible_check_mode
+
+- name: Require installed system GNOME extensions
+  ansible.builtin.assert:
+    that:
+      - item.stat.isdir | default(false)
+    fail_msg: "Expected installed extension {{ item.item }} under /usr/share/gnome-shell/extensions."
+  loop: "{{ (gnome_extension_dirs | default({})).get('results', []) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: not ansible_check_mode
+
+- name: Check installed user GNOME extension directories
+  ansible.builtin.stat:
+    path: "{{ workstation_home }}/.local/share/gnome-shell/extensions/{{ item }}"
+  loop: "{{ gnome_extension_user_uuids }}"
+  loop_control:
+    label: "{{ item }}"
+  register: gnome_user_extension_dirs
+  when: not ansible_check_mode
+
+- name: Require installed user GNOME extensions
+  ansible.builtin.assert:
+    that:
+      - item.stat.isdir | default(false)
+    fail_msg: "Expected installed extension {{ item.item }} under {{ workstation_home }}/.local/share/gnome-shell/extensions."
+  loop: "{{ (gnome_user_extension_dirs | default({})).get('results', []) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: not ansible_check_mode
+
+- name: List GNOME window manager keybinding keys
+  ansible.builtin.command:
+    argv:
+      - gsettings
+      - list-keys
+      - org.gnome.desktop.wm.keybindings
+  register: gnome_wm_schema
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: List GNOME mutter keybinding keys
+  ansible.builtin.command:
+    argv:
+      - gsettings
+      - list-keys
+      - org.gnome.mutter.keybindings
+  register: gnome_mutter_schema
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: List Pop Shell keybinding keys
+  ansible.builtin.command:
+    argv:
+      - gsettings
+      - list-keys
+      - org.gnome.shell.extensions.pop-shell
+  register: pop_shell_schema
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Require GNOME window manager keybinding keys
+  ansible.builtin.assert:
+    that:
+      - item in (gnome_wm_schema | default({})).get('stdout_lines', [])
+    fail_msg: "GNOME WM schema is missing key {{ item }}"
+  loop: "{{ gnome_wm_keybindings.keys() | list }}"
+  loop_control:
+    label: "{{ item }}"
+  when: not ansible_check_mode
+
+- name: Require GNOME mutter keybinding keys
+  ansible.builtin.assert:
+    that:
+      - item in (gnome_mutter_schema | default({})).get('stdout_lines', [])
+    fail_msg: "GNOME mutter schema is missing key {{ item }}"
+  loop: "{{ gnome_mutter_keybindings.keys() | list }}"
+  loop_control:
+    label: "{{ item }}"
+  when: not ansible_check_mode
+
+- name: Require Pop Shell keybinding keys
+  ansible.builtin.assert:
+    that:
+      - item in (pop_shell_schema | default({})).get('stdout_lines', [])
+    fail_msg: "Pop Shell schema is missing key {{ item }}"
+  loop: "{{ pop_shell_keybindings.keys() | list }}"
+  loop_control:
+    label: "{{ item }}"
+  when: not ansible_check_mode
+
+- name: Read enabled GNOME extensions
+  community.general.dconf:
+    key: /org/gnome/shell/enabled-extensions
+    state: read
+  register: gnome_enabled_extensions
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Parse enabled GNOME extensions
+  ansible.builtin.set_fact:
+    gnome_enabled_extensions_current: "{{ (gnome_enabled_extensions.value | default('[]', true) | regex_replace('^@as ', '')) | from_yaml }}"
+  when: not ansible_check_mode
+
+- name: Default enabled GNOME extensions in check mode
+  ansible.builtin.set_fact:
+    gnome_enabled_extensions_current: []
+  when: ansible_check_mode
+
+- name: Merge enabled GNOME extensions
+  ansible.builtin.set_fact:
+    gnome_enabled_extensions_merged: "{{ (gnome_enabled_extensions_current + gnome_extension_uuids) | unique | list }}"
+
+- name: Enable the GNOME extensions
+  community.general.dconf:
+    key: /org/gnome/shell/enabled-extensions
+    value: "{{ gnome_enabled_extensions_merged | string }}"
+  when: not ansible_check_mode
+
+- name: Enable user extensions
+  community.general.dconf:
+    key: /org/gnome/shell/disable-user-extensions
+    value: false
+  when: not ansible_check_mode
+
+- name: Configure GNOME window manager keybindings
+  community.general.dconf:
+    key: "/org/gnome/desktop/wm/keybindings/{{ item.key }}"
+    value: "{{ item.value }}"
+  loop: "{{ gnome_wm_keybindings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: not ansible_check_mode
+
+- name: Configure GNOME mutter keybindings
+  community.general.dconf:
+    key: "/org/gnome/mutter/keybindings/{{ item.key }}"
+    value: "{{ item.value }}"
+  loop: "{{ gnome_mutter_keybindings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: not ansible_check_mode
+
+- name: Configure Pop Shell keybindings
+  community.general.dconf:
+    key: "/org/gnome/shell/extensions/pop-shell/{{ item.key }}"
+    value: "{{ item.value }}"
+  loop: "{{ pop_shell_keybindings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: not ansible_check_mode
+
+- name: Configure GNOME workspace settings
+  community.general.dconf:
+    key: "{{ item.key }}"
+    value: "{{ item.value }}"
+  loop: "{{ gnome_workspace_settings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: not ansible_check_mode
+
+- name: Read GNOME window manager keybindings for verification
+  community.general.dconf:
+    key: "/org/gnome/desktop/wm/keybindings/{{ item.key }}"
+    state: read
+  loop: "{{ gnome_wm_keybindings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: gnome_wm_keybindings_verify
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify GNOME window manager keybindings
+  ansible.builtin.assert:
+    that:
+      - ((item.value | default('')) | regex_replace('^@as ', '')) == (item.item.value | regex_replace('^@as ', ''))
+    fail_msg: "Expected {{ item.item.value }}, got {{ item.value }} for {{ item.item.key }}"
+  loop: "{{ (gnome_wm_keybindings_verify | default({})).get('results', []) }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+  when: not ansible_check_mode
+
+- name: Read GNOME mutter keybindings for verification
+  community.general.dconf:
+    key: "/org/gnome/mutter/keybindings/{{ item.key }}"
+    state: read
+  loop: "{{ gnome_mutter_keybindings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: gnome_mutter_keybindings_verify
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify GNOME mutter keybindings
+  ansible.builtin.assert:
+    that:
+      - ((item.value | default('')) | regex_replace('^@as ', '')) == (item.item.value | regex_replace('^@as ', ''))
+    fail_msg: "Expected {{ item.item.value }}, got {{ item.value }} for {{ item.item.key }}"
+  loop: "{{ (gnome_mutter_keybindings_verify | default({})).get('results', []) }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+  when: not ansible_check_mode
+
+- name: Read Pop Shell keybindings for verification
+  community.general.dconf:
+    key: "/org/gnome/shell/extensions/pop-shell/{{ item.key }}"
+    state: read
+  loop: "{{ pop_shell_keybindings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: pop_shell_keybindings_verify
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify Pop Shell keybindings
+  ansible.builtin.assert:
+    that:
+      - ((item.value | default('')) | regex_replace('^@as ', '')) == (item.item.value | regex_replace('^@as ', ''))
+    fail_msg: "Expected {{ item.item.value }}, got {{ item.value }} for {{ item.item.key }}"
+  loop: "{{ (pop_shell_keybindings_verify | default({})).get('results', []) }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+  when: not ansible_check_mode
+
+- name: Read GNOME workspace settings for verification
+  community.general.dconf:
+    key: "{{ item.key }}"
+    state: read
+  loop: "{{ gnome_workspace_settings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: gnome_workspace_settings_verify
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify GNOME workspace settings
+  ansible.builtin.assert:
+    that:
+      - (item.value | string) == (item.item.value | string)
+    fail_msg: "Expected {{ item.item.value }}, got {{ item.value }} for {{ item.item.key }}"
+  loop: "{{ (gnome_workspace_settings_verify | default({})).get('results', []) }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+  when: not ansible_check_mode
+
+- name: Read enabled GNOME extensions for verification
+  community.general.dconf:
+    key: /org/gnome/shell/enabled-extensions
+    state: read
+  register: gnome_enabled_extensions_verify
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify enabled GNOME extensions
+  ansible.builtin.assert:
+    that:
+      - item in ((gnome_enabled_extensions_verify | default({})).get('value', '[]') | default('[]', true) | regex_replace('^@as ', '') | from_yaml)
+    fail_msg: "Expected GNOME extension {{ item }} to be enabled."
+  loop: "{{ gnome_extension_uuids }}"
+  loop_control:
+    label: "{{ item }}"
+  when: not ansible_check_mode
+
+- name: Read user extension setting
+  community.general.dconf:
+    key: /org/gnome/shell/disable-user-extensions
+    state: read
+  register: gnome_disable_user_extensions
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify user extensions are enabled
+  ansible.builtin.assert:
+    that:
+      - ((gnome_disable_user_extensions | default({})).get('value', 'false') | default('false', true) | bool) == false
+    fail_msg: "User extensions are disabled."
+  when: not ansible_check_mode
+
+- name: Remind to restart the GNOME session
+  ansible.builtin.debug:
+    msg: "Log out and back in so GNOME Shell loads the newly installed extensions."

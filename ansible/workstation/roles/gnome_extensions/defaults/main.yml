@@ -1,0 +1,64 @@
+gnome_extension_packages:
+  - gnome-shell-extension-appindicator
+  - gnome-shell-extension-pop-shell
+
+gnome_extension_dependencies:
+  - dconf
+  - dbus-tools
+  - python3-psutil
+  - python3-gobject
+
+gnome_extension_system_uuids:
+  - appindicatorsupport@rgcjonas.gmail.com
+  - pop-shell@system76.com
+
+gnome_vitals_uuid: Vitals@CoreCoding.com
+gnome_vitals_archive: "{{ workstation_home }}/.cache/gnome-extensions/{{ gnome_vitals_uuid }}.shell-extension.zip"
+gnome_vitals_extension_dir: "{{ workstation_home }}/.local/share/gnome-shell/extensions/{{ gnome_vitals_uuid }}"
+
+gnome_extension_user_uuids:
+  - "{{ gnome_vitals_uuid }}"
+
+gnome_extension_uuids:
+  - appindicatorsupport@rgcjonas.gmail.com
+  - pop-shell@system76.com
+  - Vitals@CoreCoding.com
+
+gnome_wm_keybindings:
+  switch-to-workspace-1: "['<Super>1']"
+  switch-to-workspace-2: "['<Super>2']"
+  switch-to-workspace-3: "['<Super>3']"
+  switch-to-workspace-4: "['<Super>4']"
+  switch-to-workspace-5: "['<Super>5']"
+  switch-to-workspace-6: "['<Super>6']"
+  switch-to-workspace-7: "['<Super>7']"
+  switch-to-workspace-8: "['<Super>8']"
+  switch-to-workspace-9: "['<Super>9']"
+  switch-to-workspace-10: "['<Super>0']"
+  switch-to-workspace-left: "['<Alt>h']"
+  switch-to-workspace-right: "['<Alt>l']"
+  move-to-workspace-1: "['<Shift><Super>1']"
+  move-to-workspace-2: "['<Shift><Super>2']"
+  move-to-workspace-3: "['<Shift><Super>3']"
+  move-to-workspace-4: "['<Shift><Super>4']"
+  move-to-workspace-5: "['<Shift><Super>5']"
+  move-to-workspace-6: "['<Shift><Super>6']"
+  move-to-workspace-7: "['<Shift><Super>7']"
+  move-to-workspace-8: "['<Shift><Super>8']"
+  move-to-workspace-9: "['<Shift><Super>9']"
+  move-to-workspace-10: "['<Shift><Super>0']"
+  move-to-workspace-left: "['<Alt><Super>h']"
+  move-to-workspace-right: "['<Alt><Super>l']"
+
+gnome_mutter_keybindings:
+  toggle-tiled-left: "@as []"
+  toggle-tiled-right: "@as []"
+
+gnome_workspace_settings:
+  /org/gnome/mutter/dynamic-workspaces: "false"
+  /org/gnome/desktop/wm/preferences/num-workspaces: "10"
+
+pop_shell_keybindings:
+  activate-launcher: "@as []"
+  pop-monitor-left: "['<Control><Super>h']"
+  pop-monitor-right: "['<Control><Super>l']"

@@ -25,7 +25,7 @@ docker run -it \
             --user=$(id -u):$(id -g) \
             --device /dev/dri \
             --name cursor \
-            -v ~/dotfiles/opencode/.cursor:/code/.cursor \
+            -v ~/setup/dotfiles/opencode/.cursor:/code/.cursor \
             -v $(pwd):/code/frontend \
             cursor
 ```

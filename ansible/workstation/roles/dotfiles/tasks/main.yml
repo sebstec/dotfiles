@@ -13,6 +13,12 @@
     fail_msg: "Expected {{ dotfiles_ssh_key }} to exist as a regular file on the target."
   when: not ansible_check_mode
 
+- name: Ensure the dotfiles parent directory
+  ansible.builtin.file:
+    path: "{{ dotfiles_dest | dirname }}"
+    state: directory
+    mode: "0755"
+
 - name: Check for an existing dotfiles clone
   ansible.builtin.stat:
     path: "{{ dotfiles_dest }}/.git"

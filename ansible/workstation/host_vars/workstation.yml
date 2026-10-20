@@ -4,5 +4,10 @@ workstation_hostname: sbfedw1
 
 dotfiles_repo_url: git@github.com-cy:sebstec/dotfiles.git
 dotfiles_repo_version: master
-dotfiles_dest: "{{ workstation_home }}/dotfiles"
+dotfiles_dest: "{{ workstation_home }}/setup/dotfiles"
 dotfiles_ssh_key: "{{ workstation_home }}/.ssh/cybertech_ed25519"
+
+nvim_repo_url: git@github.com-cy:sebstec/kickstart.nvim.git
+nvim_repo_version: master
+nvim_repo_dest: "{{ workstation_home }}/setup/kickstart.nvim"
+opencode_config_dir: "{{ dotfiles_dest }}/opencode/opencode"

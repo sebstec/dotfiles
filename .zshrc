@@ -292,7 +292,7 @@ fi
 #ab hier meins
 export EDITOR="/usr/bin/nvim"
 export PATH=$PATH:/usr/local/go/bin
-export PRETTIERD_DEFAULT_CONFIG=$HOME/.config/nvim/lua/custom/plugins/.prettierrc
+export PRETTIERD_DEFAULT_CONFIG=$HOME/setup/kickstart.nvim/lua/custom/plugins/.prettierrc
 
 setup_git_prompt() {
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -375,3 +375,4 @@ zle -N zle-keymap-select
 
 #farbe home: 044, farbe arbeit: 056
 alias docker='sudo docker'
+alias vis="$HOME/setup/kickstart.nvim/vis.sh"

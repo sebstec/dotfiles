@@ -1,6 +1,6 @@
 ## global config
 
-The host directory `$DOTFILES/opencode/opencode` is mounted read-only at `/etc/opencode`.
+The host directory `~/setup/dotfiles/opencode/opencode` is mounted read-only at `/etc/opencode`.
 OpenCode v2 treats `/etc/opencode` as managed configuration with the highest precedence.
 
 - Shared config, skills, rules, and `AGENTS.md` live there.
@@ -21,7 +21,7 @@ docker run -it \
             --user=$(id -u):$(id -g) \
             --device /dev/dri \
             --name ocoderaw \
-            -v ~/dotfiles/opencode/opencode:/etc/opencode:ro \
+            -v ~/setup/dotfiles/opencode/opencode:/etc/opencode:ro \
             ocode
 ```
 
@@ -37,7 +37,7 @@ docker run -it \
             --user=$(id -u):$(id -g) \
             --device /dev/dri \
             --name ocodeproject \
-            -v ~/dotfiles/opencode/opencode:/etc/opencode:ro \
+            -v ~/setup/dotfiles/opencode/opencode:/etc/opencode:ro \
             -v $PATH_TO_WORKSPACE_AGENTS.md:/code/AGENTS.md:ro \
             -v $PATH_TO_WORKSPACE/opencode.json:/code/opencode.json:ro" \
             -v $PATH_TO_WORKSPACE_API:/code/api \

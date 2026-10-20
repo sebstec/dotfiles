@@ -1,0 +1,13 @@
+- name: Check the OpenCode config
+  ansible.builtin.stat:
+    path: "{{ opencode_config_file }}"
+  register: opencode_config
+  when: not ansible_check_mode
+
+- name: Require the OpenCode config
+  ansible.builtin.assert:
+    that:
+      - opencode_config.stat.exists | default(false)
+      - opencode_config.stat.isreg | default(false)
+    fail_msg: "Expected {{ opencode_config_file }}; clone the dotfiles repo so the OpenCode config can be mounted."
+  when: not ansible_check_mode

@@ -14,3 +14,7 @@
       tags: kitty
     - role: tmux
       tags: tmux
+    - role: neovim
+      tags: neovim
+    - role: opencode
+      tags: opencode

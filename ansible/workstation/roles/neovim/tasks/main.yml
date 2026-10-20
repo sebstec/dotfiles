@@ -1,0 +1,72 @@
+- name: Install Neovim packages
+  ansible.builtin.dnf:
+    name: "{{ neovim_packages }}"
+    state: present
+  become: true
+
+- name: Ensure the local font directory
+  ansible.builtin.file:
+    path: "{{ nerd_font_base }}"
+    state: directory
+    mode: "0755"
+
+- name: Download SauceCodePro Nerd Font
+  ansible.builtin.get_url:
+    url: "{{ nerd_font_url }}"
+    dest: "{{ nerd_font_archive }}"
+    mode: "0644"
+    force: false
+
+- name: Extract all SauceCodePro Nerd Font faces
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -m
+      - zipfile
+      - -e
+      - "{{ nerd_font_archive }}"
+      - "{{ nerd_font_dir }}"
+    creates: "{{ nerd_font_dir }}"
+  when: not ansible_check_mode
+
+- name: Refresh the font cache
+  ansible.builtin.command:
+    cmd: fc-cache -f
+  changed_when: false
+
+- name: Ensure the setup directory
+  ansible.builtin.file:
+    path: "{{ nvim_repo_dest | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: Check for an existing Neovim config repository
+  ansible.builtin.stat:
+    path: "{{ nvim_repo_dest }}/init.lua"
+  register: nvim_config
+
+- name: Ask the user to clone the Neovim configuration
+  ansible.builtin.pause:
+    prompt: |
+      Clone the Neovim configuration repository on the target, then press Enter to continue:
+
+        git clone --branch {{ nvim_repo_version }} {{ nvim_repo_url }} {{ nvim_repo_dest }}
+
+      The GitHub key at {{ dotfiles_ssh_key }} and its ssh-agent identity must be available on the target.
+  when:
+    - not nvim_config.stat.exists
+    - not ansible_check_mode
+
+- name: Verify the Neovim config repository
+  ansible.builtin.stat:
+    path: "{{ nvim_repo_dest }}/init.lua"
+  register: nvim_clone
+  when: not ansible_check_mode
+
+- name: Require the Neovim config repository
+  ansible.builtin.assert:
+    that:
+      - nvim_clone.stat.exists | default(false)
+      - nvim_clone.stat.isreg | default(false)
+    fail_msg: "The Neovim config repository at {{ nvim_repo_dest }} is incomplete."
+  when: not ansible_check_mode

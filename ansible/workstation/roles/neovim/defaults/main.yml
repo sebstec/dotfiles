@@ -1,0 +1,7 @@
+neovim_packages:
+  - neovim
+
+nerd_font_url: https://github.com/ryanoasis/nerd-fonts/releases/latest/download/SourceCodePro.zip
+nerd_font_base: "{{ workstation_home }}/.local/share/fonts"
+nerd_font_dir: "{{ nerd_font_base }}/SauceCodePro"
+nerd_font_archive: "{{ nerd_font_base }}/SourceCodePro.zip"

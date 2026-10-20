@@ -9,11 +9,17 @@
     - role: dotfiles
       tags: dotfiles
     - role: zsh
-      tags: zsh
+      tags:
+        - zsh
+        - dotfiles
     - role: kitty
-      tags: kitty
+      tags:
+        - kitty
+        - dotfiles
     - role: tmux
-      tags: tmux
+      tags:
+        - tmux
+        - dotfiles
     - role: neovim
       tags: neovim
     - role: opencode

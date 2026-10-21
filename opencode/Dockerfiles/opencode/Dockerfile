@@ -59,7 +59,7 @@ RUN mkdir -p /code && chown -R ubuntu:ubuntu /code
 
 USER ubuntu
 # opencode CLI
-RUN curl -fsSL https://opencode.ai/v2/install | bash -s -- --version 2.0.32
+RUN curl -fsSL https://opencode.ai/v2/install | bash -s -- --version 2.1.2
 
 ENTRYPOINT ["bash", "-c", "echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc && source ~/.bashrc && exec \"$@\"", "--"]
 CMD ["bash"]

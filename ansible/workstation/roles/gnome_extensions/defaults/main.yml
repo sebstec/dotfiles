@@ -62,3 +62,16 @@ pop_shell_keybindings:
   activate-launcher: "@as []"
   pop-monitor-left: "['<Control><Super>h']"
   pop-monitor-right: "['<Control><Super>l']"
+
+pop_shell_config_file: "{{ workstation_home }}/.config/pop-shell/config.json"
+pop_shell_float_rules:
+  - class: "org.wireshark.Wireshark"
+    title: "Unsaved packets…"
+  - class: "io.github.seadve.Kooha"
+  - class: "pop-shell-exceptions"
+  - class: "com.github.ryonakano.reco"
+  - class: "protonvpn-app"
+  - class: "io.github.bugaevc.wl-clipboard"
+    title: "wl-clipboard"
+  - class: "flameshot"
+    title: "flameshot"

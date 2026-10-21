@@ -270,6 +270,84 @@
     label: "{{ item.key }}"
   when: not ansible_check_mode
 
+- name: Ensure the Pop Shell config directory
+  ansible.builtin.file:
+    path: "{{ pop_shell_config_file | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: Check the Pop Shell config
+  ansible.builtin.stat:
+    path: "{{ pop_shell_config_file }}"
+  register: pop_shell_config_stat
+
+- name: Read the Pop Shell config
+  ansible.builtin.slurp:
+    src: "{{ pop_shell_config_file }}"
+  register: pop_shell_config_raw
+  when: pop_shell_config_stat.stat.exists
+
+- name: Set the current Pop Shell config
+  ansible.builtin.set_fact:
+    pop_shell_config_current: "{{ ((pop_shell_config_raw.content | default('e30=') | b64decode) | default('{}', true)) | from_json }}"
+
+- name: Start the merged Pop Shell float rules
+  ansible.builtin.set_fact:
+    pop_shell_float_merged: "{{ pop_shell_config_current.float | default([]) | rejectattr('class', 'equalto', 'pop-shell-example') | list }}"
+
+- name: Merge the Pop Shell float rules
+  ansible.builtin.set_fact:
+    pop_shell_float_merged: "{{ pop_shell_float_merged + [item] if item not in pop_shell_float_merged else pop_shell_float_merged }}"
+  loop: "{{ pop_shell_float_rules }}"
+  loop_control:
+    label: "{{ item.class | default(item.title | default('rule')) }}"
+
+- name: Merge the Pop Shell config
+  ansible.builtin.set_fact:
+    pop_shell_config_merged: "{{ pop_shell_config_current | combine({'float': pop_shell_float_merged}) }}"
+
+- name: Write the Pop Shell config
+  ansible.builtin.copy:
+    dest: "{{ pop_shell_config_file }}"
+    content: "{{ pop_shell_config_merged | to_nice_json }}\n"
+    mode: "0644"
+  when: not ansible_check_mode
+
+- name: Read the Pop Shell config for verification
+  ansible.builtin.slurp:
+    src: "{{ pop_shell_config_file }}"
+  register: pop_shell_config_verify_raw
+  when: not ansible_check_mode
+
+- name: Parse the Pop Shell config for verification
+  ansible.builtin.set_fact:
+    pop_shell_config_verify: "{{ pop_shell_config_verify_raw.content | b64decode | from_json }}"
+  when: not ansible_check_mode
+
+- name: Verify the Pop Shell float rules
+  ansible.builtin.assert:
+    that:
+      - item in pop_shell_config_verify.float
+    fail_msg: "Missing Pop Shell float rule {{ item.class | default(item.title | default('rule')) }}."
+  loop: "{{ pop_shell_float_rules }}"
+  loop_control:
+    label: "{{ item.class | default(item.title | default('rule')) }}"
+  when: not ansible_check_mode
+
+- name: Verify the Pop Shell placeholder is absent
+  ansible.builtin.assert:
+    that:
+      - item.get('class', '') != 'pop-shell-example'
+    fail_msg: "The Pop Shell placeholder rule is still present."
+  loop: "{{ pop_shell_config_verify.float }}"
+  loop_control:
+    label: "{{ item.class | default(item.title | default('rule')) }}"
+  when: not ansible_check_mode
+
+- name: Remind to reload Pop Shell
+  ansible.builtin.debug:
+    msg: "Restart the GNOME session or reload Pop Shell to apply the floating window exceptions."
+
 - name: Configure GNOME workspace settings
   community.general.dconf:
     key: "{{ item.key }}"

@@ -1,0 +1,56 @@
+apps_download_dir: /tmp/ansible-apps
+apps_tar_dir: "{{ workstation_home }}/setup/tarApps"
+
+apps_dnf_packages:
+  - thunderbird
+  - flameshot
+  - gimp
+  - flatpak
+  - fuse-libs
+  - libsecret
+  - dconf
+  - dbus-tools
+  - python3-psutil
+  - python3-gobject
+
+apps_flatpak_remote: flathub
+apps_flatpak_remote_url: https://flathub.org/repo/flathub.flatpakrepo
+apps_flatpak_packages:
+  - com.rustdesk.RustDesk
+  - io.github.seadve.Kooha
+  - com.spotify.Client
+  - org.inkscape.Inkscape
+  - com.bitwarden.desktop
+  - com.github.tchx84.Flatseal
+
+thunderbird_wayland_env_file: "{{ workstation_home }}/.config/environment.d/50-thunderbird-wayland.conf"
+
+flameshot_script: "{{ workstation_home }}/.local/bin/flameshot-wayland"
+flameshot_keybinding_path: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-flameshot/
+flameshot_keybinding_name: Flameshot
+flameshot_keybinding_command: "{{ workstation_home }}/.local/bin/flameshot-wayland"
+flameshot_keybinding_binding: "<Shift><Alt>s"
+flameshot_keybinding_settings:
+  - key: name
+    value: "{{ flameshot_keybinding_name }}"
+  - key: command
+    value: "{{ flameshot_keybinding_command }}"
+  - key: binding
+    value: "{{ flameshot_keybinding_binding }}"
+
+anydesk_version: "8.1.0"
+anydesk_url: "https://download.anydesk.com/linux/anydesk-{{ anydesk_version }}-amd64.tar.gz"
+anydesk_archive: "{{ apps_download_dir }}/anydesk-{{ anydesk_version }}-amd64.tar.gz"
+anydesk_app_dir: "{{ apps_tar_dir }}/anydesk"
+anydesk_marker: "{{ anydesk_app_dir }}/.extracted"
+
+bazecor_repo_api: https://api.github.com/repos/Dygmalab/Bazecor/releases/latest
+bazecor_app_dir: "{{ apps_tar_dir }}/bazecor"
+bazecor_appimage: "{{ bazecor_app_dir }}/Bazecor.AppImage"
+bazecor_version_file: "{{ bazecor_app_dir }}/.version"
+
+proton_drive_cli_version: "0.9.0"
+proton_drive_cli_url: "https://proton.me/download/drive/cli/{{ proton_drive_cli_version }}/linux-x64/proton-drive"
+proton_drive_cli_checksum: "sha512:3533025ba69ae112b64e3e01fbcc1ad0688136a4043f6cf6a72886967d85fdcd9ec235479c2e113171614be5225bfba93427509a05ca5aa6071d924fa7e91ca8"
+proton_drive_cli_archive: "{{ apps_download_dir }}/proton-drive-{{ proton_drive_cli_version }}"
+proton_drive_cli_dest: /usr/local/bin/proton-drive

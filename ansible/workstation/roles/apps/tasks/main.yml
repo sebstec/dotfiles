@@ -1,0 +1,340 @@
+---
+- name: Verify target is Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["distribution"] == "Fedora"
+    fail_msg: "This role supports Fedora only."
+
+- name: Verify the target architecture
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["architecture"] == "x86_64"
+    fail_msg: "This role supports x86_64 applications only."
+
+- name: Install application packages
+  ansible.builtin.dnf:
+    name: "{{ apps_dnf_packages }}"
+    state: present
+  become: true
+
+- name: Ensure the download directory
+  ansible.builtin.file:
+    path: "{{ apps_download_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Ensure the tarApps directory
+  ansible.builtin.file:
+    path: "{{ apps_tar_dir }}"
+    state: directory
+    mode: "0755"
+
+# - name: Ensure the Thunderbird environment directory
+#   ansible.builtin.file:
+#     path: "{{ thunderbird_wayland_env_file | dirname }}"
+#     state: directory
+#     mode: "0755"
+#
+# - name: Configure Thunderbird for Wayland
+#   ansible.builtin.copy:
+#     dest: "{{ thunderbird_wayland_env_file }}"
+#     content: "MOZ_ENABLE_WAYLAND=1\n"
+#     mode: "0644"
+
+- name: Add the Flathub remote
+  community.general.flatpak_remote:
+    name: "{{ apps_flatpak_remote }}"
+    flatpakrepo_url: "{{ apps_flatpak_remote_url }}"
+    method: user
+    state: present
+  when: not ansible_check_mode
+
+- name: Install Flatpak applications
+  community.general.flatpak:
+    name: "{{ apps_flatpak_packages }}"
+    remote: "{{ apps_flatpak_remote }}"
+    method: user
+    state: present
+  when: not ansible_check_mode
+
+- name: Ensure the Flameshot script directory
+  ansible.builtin.file:
+    path: "{{ flameshot_script | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: Install the Flameshot Wayland wrapper
+  ansible.builtin.copy:
+    src: flameshot-wayland.sh
+    dest: "{{ flameshot_script }}"
+    mode: "0755"
+
+- name: Read GNOME custom keybindings
+  community.general.dconf:
+    key: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
+    state: read
+  register: flameshot_custom_keybindings
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Parse GNOME custom keybindings
+  ansible.builtin.set_fact:
+    flameshot_custom_keybindings_current: "{{ (flameshot_custom_keybindings.value | default('[]', true) | regex_replace('^@as ', '')) | from_yaml }}"
+  when: not ansible_check_mode
+
+- name: Default GNOME custom keybindings in check mode
+  ansible.builtin.set_fact:
+    flameshot_custom_keybindings_current: []
+  when: ansible_check_mode
+
+- name: Merge the Flameshot custom keybinding
+  ansible.builtin.set_fact:
+    flameshot_custom_keybindings_merged: "{{ (flameshot_custom_keybindings_current + [flameshot_keybinding_path]) | unique | list }}"
+
+- name: Enable the Flameshot custom keybinding
+  community.general.dconf:
+    key: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
+    value: "{{ flameshot_custom_keybindings_merged | string }}"
+  when: not ansible_check_mode
+
+- name: Configure the Flameshot custom keybinding
+  community.general.dconf:
+    key: "{{ flameshot_keybinding_path }}{{ item.key }}"
+    value: "'{{ item.value }}'"
+  loop: "{{ flameshot_keybinding_settings }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: not ansible_check_mode
+
+- name: Read the Flameshot custom keybinding list
+  community.general.dconf:
+    key: /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings
+    state: read
+  register: flameshot_custom_keybindings_verify
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify the Flameshot custom keybinding list
+  ansible.builtin.assert:
+    that:
+      - flameshot_keybinding_path in ((flameshot_custom_keybindings_verify.value | default('[]', true) | regex_replace('^@as ', '')) | from_yaml)
+    fail_msg: "Flameshot custom keybinding path is missing from the GNOME custom keybindings list."
+  when: not ansible_check_mode
+
+- name: Read the Flameshot custom keybinding settings
+  community.general.dconf:
+    key: "{{ flameshot_keybinding_path }}{{ item.key }}"
+    state: read
+  loop: "{{ flameshot_keybinding_settings }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: flameshot_keybinding_verify
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify the Flameshot custom keybinding settings
+  ansible.builtin.assert:
+    that:
+      - item.value == "'" ~ item.item.value ~ "'"
+    fail_msg: "Expected '{{ item.item.value }}', got {{ item.value }} for {{ item.item.key }}."
+  loop: "{{ (flameshot_keybinding_verify | default({})).get('results', []) }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+  when: not ansible_check_mode
+
+- name: Check the AnyDesk extraction marker
+  ansible.builtin.stat:
+    path: "{{ anydesk_marker }}"
+  register: anydesk_extracted
+
+- name: Ensure the AnyDesk directory
+  ansible.builtin.file:
+    path: "{{ anydesk_app_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Download AnyDesk
+  ansible.builtin.get_url:
+    url: "{{ anydesk_url }}"
+    dest: "{{ anydesk_archive }}"
+    mode: "0644"
+  when:
+    - not ansible_check_mode
+    - not anydesk_extracted.stat.exists
+
+- name: Extract AnyDesk
+  ansible.builtin.unarchive:
+    src: "{{ anydesk_archive }}"
+    dest: "{{ anydesk_app_dir }}"
+    remote_src: true
+  when:
+    - not ansible_check_mode
+    - not anydesk_extracted.stat.exists
+
+- name: Mark AnyDesk as extracted
+  ansible.builtin.copy:
+    dest: "{{ anydesk_marker }}"
+    content: "{{ anydesk_version }}\n"
+    mode: "0644"
+  when:
+    - not ansible_check_mode
+    - not anydesk_extracted.stat.exists
+
+- name: Find the AnyDesk executable
+  ansible.builtin.find:
+    paths: "{{ anydesk_app_dir }}"
+    patterns: anydesk
+    file_type: file
+    recurse: true
+  register: anydesk_binaries
+  when: not ansible_check_mode
+
+- name: Require the AnyDesk executable
+  ansible.builtin.assert:
+    that:
+      - anydesk_binaries.matched | default(0) > 0
+    fail_msg: "AnyDesk executable not found under {{ anydesk_app_dir }}."
+  when: not ansible_check_mode
+
+- name: Set the AnyDesk executable path
+  ansible.builtin.set_fact:
+    anydesk_binary: "{{ anydesk_binaries.files[0].path }}"
+  when: not ansible_check_mode
+
+- name: Make the AnyDesk executable runnable
+  ansible.builtin.file:
+    path: "{{ anydesk_binary }}"
+    mode: "0755"
+  when: not ansible_check_mode
+
+- name: Query the latest Bazecor release
+  ansible.builtin.uri:
+    url: "{{ bazecor_repo_api }}"
+    return_content: true
+  register: bazecor_release
+  check_mode: false
+
+- name: Set the latest Bazecor version
+  ansible.builtin.set_fact:
+    bazecor_tag: "{{ bazecor_release.json.tag_name }}"
+
+- name: Select the latest Bazecor AppImage asset
+  ansible.builtin.set_fact:
+    bazecor_appimage_asset: "{{ item }}"
+  loop: "{{ bazecor_release.json.assets }}"
+  when: item.name.endswith("x64.AppImage")
+
+- name: Require a Bazecor AppImage asset
+  ansible.builtin.assert:
+    that:
+      - ((bazecor_appimage_asset | default({})).get('name', '') | length) > 0
+    fail_msg: "No x64 AppImage asset found in the latest Bazecor release."
+
+- name: Ensure the Bazecor directory
+  ansible.builtin.file:
+    path: "{{ bazecor_app_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Read the installed Bazecor version
+  ansible.builtin.command:
+    cmd: "cat {{ bazecor_version_file }}"
+  register: bazecor_installed_version
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Check the installed Bazecor AppImage
+  ansible.builtin.stat:
+    path: "{{ bazecor_appimage }}"
+  register: bazecor_appimage_stat
+
+- name: Download the Bazecor AppImage
+  ansible.builtin.get_url:
+    url: "{{ bazecor_appimage_asset.browser_download_url }}"
+    dest: "{{ apps_download_dir }}/{{ bazecor_appimage_asset.name }}"
+    checksum: "{{ bazecor_appimage_asset.digest | default(omit, true) }}"
+    mode: "0755"
+  when:
+    - not ansible_check_mode
+    - ((bazecor_installed_version.stdout | trim) != bazecor_tag) or (not bazecor_appimage_stat.stat.exists)
+
+- name: Install the Bazecor AppImage
+  ansible.builtin.copy:
+    src: "{{ apps_download_dir }}/{{ bazecor_appimage_asset.name }}"
+    dest: "{{ bazecor_appimage }}"
+    remote_src: true
+    mode: "0755"
+  when:
+    - not ansible_check_mode
+    - ((bazecor_installed_version.stdout | trim) != bazecor_tag) or (not bazecor_appimage_stat.stat.exists)
+
+- name: Record the Bazecor version
+  ansible.builtin.copy:
+    dest: "{{ bazecor_version_file }}"
+    content: "{{ bazecor_tag }}\n"
+    mode: "0644"
+  when:
+    - not ansible_check_mode
+    - ((bazecor_installed_version.stdout | trim) != bazecor_tag) or (not bazecor_appimage_stat.stat.exists)
+
+- name: Check the Proton Drive CLI
+  ansible.builtin.stat:
+    path: "{{ proton_drive_cli_dest }}"
+  register: proton_drive_cli_stat
+
+- name: Read the installed Proton Drive CLI version
+  ansible.builtin.command:
+    cmd: "{{ proton_drive_cli_dest }} version"
+  register: proton_drive_cli_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: proton_drive_cli_stat.stat.exists
+
+- name: Download the Proton Drive CLI
+  ansible.builtin.get_url:
+    url: "{{ proton_drive_cli_url }}"
+    dest: "{{ proton_drive_cli_archive }}"
+    checksum: "{{ proton_drive_cli_checksum }}"
+    mode: "0755"
+  when:
+    - not ansible_check_mode
+    - (not proton_drive_cli_stat.stat.exists) or (proton_drive_cli_version not in ((proton_drive_cli_installed | default({})).get('stdout', '') ~ (proton_drive_cli_installed | default({})).get('stderr', '')))
+
+- name: Install the Proton Drive CLI
+  ansible.builtin.copy:
+    src: "{{ proton_drive_cli_archive }}"
+    dest: "{{ proton_drive_cli_dest }}"
+    remote_src: true
+    mode: "0755"
+  become: true
+  when:
+    - not ansible_check_mode
+    - (not proton_drive_cli_stat.stat.exists) or (proton_drive_cli_version not in ((proton_drive_cli_installed | default({})).get('stdout', '') ~ (proton_drive_cli_installed | default({})).get('stderr', '')))
+
+- name: Verify the Proton Drive CLI
+  ansible.builtin.command:
+    cmd: "{{ proton_drive_cli_dest }} version"
+  register: proton_drive_cli_version_output
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Require the Proton Drive CLI
+  ansible.builtin.assert:
+    that:
+      - proton_drive_cli_version_output.rc == 0
+      - proton_drive_cli_version in (proton_drive_cli_version_output.stdout ~ proton_drive_cli_version_output.stderr)
+    fail_msg: "Proton Drive CLI {{ proton_drive_cli_version }} is not available at {{ proton_drive_cli_dest }}."
+  when: not ansible_check_mode
+
+- name: Show the manual application paths
+  ansible.builtin.debug:
+    msg:
+      - "AnyDesk directory: {{ anydesk_app_dir }}"
+      - "AnyDesk executable: {{ anydesk_binary | default('not installed') }}"
+      - "Bazecor: {{ bazecor_appimage }}"
+      - "Proton Drive CLI: {{ proton_drive_cli_dest }}"
+      - "Run proton-drive auth login once before using the Proton Drive CLI."
+      - "Don't forget to backup thunderbird on this machine and import the backup on the target host"
+  when: not ansible_check_mode

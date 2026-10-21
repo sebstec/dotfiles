@@ -8,6 +8,8 @@
       tags: docker
     - role: gnome_extensions
       tags: gnome_extensions
+    - role: apps
+      tags: apps
     - role: ssh
       tags: ssh
     - role: dotfiles

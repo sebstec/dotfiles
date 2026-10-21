@@ -1,0 +1,40 @@
+firefox_source_home: "{{ lookup('env', 'HOME') }}"
+firefox_source_root: "{{ firefox_source_home }}/.mozilla/firefox"
+firefox_target_root: "{{ workstation_home }}/.mozilla/firefox"
+firefox_backup_dir: "{{ workstation_home }}/.mozilla/firefox.bak.{{ ansible_facts['date_time']['iso8601_basic_short'] }}"
+
+firefox_active_profiles:
+  - "bw9J1Wpi.Profile 3"
+  - "ysPktiEo.Profile 2"
+  - "zc3jtqli.default-release"
+
+firefox_source_userjs_profiles:
+  - "zc3jtqli.default-release"
+
+firefox_profile_dirs:
+  - "bw9J1Wpi.Profile 3"
+  - "ysPktiEo.Profile 2"
+  - "n6vwjzqo.default"
+  - "zc3jtqli.default-release"
+  - "zc3jtqli.default-release_pre-arkenfox"
+
+firefox_profile_groups_dir: "Profile Groups"
+firefox_profile_groups_db: "{{ firefox_target_root }}/Profile Groups/80f89eba.sqlite"
+firefox_source_profile_groups_db: "{{ firefox_source_root }}/Profile Groups/80f89eba.sqlite"
+
+firefox_csshacks_repo: "git@github.com-cy:sebstec/firefox-csshacks.git"
+firefox_userjs_repo: "git@github.com-cy:sebstec/user.js.git"
+firefox_repo_branch: master
+
+firefox_rsync_excludes:
+  - "--exclude=lock"
+  - "--exclude=.parentlock"
+  - "--exclude=cache2/"
+  - "--exclude=startupCache/"
+  - "--exclude=shader-cache/"
+  - "--exclude=crashes/"
+  - "--exclude=minidumps/"
+  - "--exclude=Crash\\ Reports/"
+  - "--exclude=Pending\\ Pings/"
+  - "--exclude=datareporting/"
+  - "--exclude=saved-telemetry-pings/"

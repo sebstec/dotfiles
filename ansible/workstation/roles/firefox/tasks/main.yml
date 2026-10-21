@@ -1,0 +1,626 @@
+---
+- name: Require a real run
+  ansible.builtin.assert:
+    that:
+      - not ansible_check_mode
+    fail_msg: "The firefox role requires a real run; it updates packages and migrates profiles."
+
+- name: Verify target is Fedora
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["distribution"] == "Fedora"
+    fail_msg: "This role supports Fedora only."
+
+- name: Check the source Firefox profile root
+  ansible.builtin.stat:
+    path: "{{ firefox_source_root }}"
+  delegate_to: localhost
+  become: false
+  register: firefox_source_root_stat
+
+- name: Require the source Firefox profile root
+  ansible.builtin.assert:
+    that:
+      - firefox_source_root_stat.stat.exists | default(false)
+      - firefox_source_root_stat.stat.isdir | default(false)
+    fail_msg: "Expected {{ firefox_source_root }} on the control host."
+
+- name: Check the source profile and metadata paths
+  ansible.builtin.stat:
+    path: "{{ firefox_source_root }}/{{ item }}"
+  loop: "{{ firefox_profile_dirs + ['profiles.ini', 'installs.ini', firefox_profile_groups_dir] }}"
+  loop_control:
+    label: "{{ item }}"
+  delegate_to: localhost
+  become: false
+  register: firefox_source_paths
+
+- name: Require the source profile and metadata paths
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists | default(false)
+    fail_msg: "Missing source Firefox path {{ item.item }}."
+  loop: "{{ firefox_source_paths.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check the source Profile Groups database
+  ansible.builtin.stat:
+    path: "{{ firefox_source_profile_groups_db }}"
+  delegate_to: localhost
+  become: false
+  register: firefox_source_profile_groups_db_stat
+
+- name: Require the source Profile Groups database
+  ansible.builtin.assert:
+    that:
+      - firefox_source_profile_groups_db_stat.stat.exists | default(false)
+    fail_msg: "Missing {{ firefox_source_profile_groups_db }}."
+
+- name: Check for a running Firefox on the target
+  ansible.builtin.command:
+    cmd: pgrep -x firefox
+  register: firefox_target_process
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require Firefox to be closed on the target
+  ansible.builtin.assert:
+    that:
+      - firefox_target_process.rc != 0
+    fail_msg: "Close Firefox on the target and rerun."
+
+- name: Check for a running Firefox on the control host
+  ansible.builtin.command:
+    cmd: pgrep -x firefox
+  delegate_to: localhost
+  become: false
+  register: firefox_source_process
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require Firefox to be closed on the control host
+  ansible.builtin.assert:
+    that:
+      - firefox_source_process.rc != 0
+    fail_msg: "Close Firefox on the control host and rerun."
+
+- name: Check the source chrome repositories
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ firefox_source_root }}/{{ item }}/chrome"
+      - status
+      - --porcelain
+  loop: "{{ firefox_active_profiles }}"
+  loop_control:
+    label: "{{ item }}"
+  delegate_to: localhost
+  become: false
+  register: firefox_source_chrome_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require clean source chrome repositories
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - item.stdout == ""
+    fail_msg: "The source chrome repository for {{ item.item }} is missing or dirty. Commit, push, or stash the changes before rerunning."
+  loop: "{{ firefox_source_chrome_status.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check the source chrome repositories are pushed
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ firefox_source_root }}/{{ item }}/chrome"
+      - rev-list
+      - --count
+      - "origin/{{ firefox_repo_branch }}..HEAD"
+  loop: "{{ firefox_active_profiles }}"
+  loop_control:
+    label: "{{ item }}"
+  delegate_to: localhost
+  become: false
+  register: firefox_source_chrome_ahead
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require the source chrome repositories to be pushed
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - item.stdout | int == 0
+    fail_msg: "The source chrome repository for {{ item.item }} has unpushed commits. Push them before rerunning."
+  loop: "{{ firefox_source_chrome_ahead.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check the source user.js repository statuses
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ firefox_source_root }}/{{ item }}/user.js-repo"
+      - status
+      - --porcelain
+  loop: "{{ firefox_source_userjs_profiles }}"
+  loop_control:
+    label: "{{ item }}"
+  delegate_to: localhost
+  become: false
+  register: firefox_source_userjs_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require clean source user.js repositories
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - item.stdout == ""
+    fail_msg: "The source user.js repository for {{ item.item }} is missing or dirty. Commit, push, or stash the changes before rerunning."
+  loop: "{{ firefox_source_userjs_status.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check the source user.js repositories are pushed
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ firefox_source_root }}/{{ item }}/user.js-repo"
+      - rev-list
+      - --count
+      - "origin/{{ firefox_repo_branch }}..HEAD"
+  loop: "{{ firefox_source_userjs_profiles }}"
+  loop_control:
+    label: "{{ item }}"
+  delegate_to: localhost
+  become: false
+  register: firefox_source_userjs_ahead
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require the source user.js repositories to be pushed
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - item.stdout | int == 0
+    fail_msg: "The source user.js repository for {{ item.item }} has unpushed commits. Push them before rerunning."
+  loop: "{{ firefox_source_userjs_ahead.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Read the source Firefox version
+  ansible.builtin.command:
+    cmd: firefox --version
+  delegate_to: localhost
+  become: false
+  register: firefox_source_version_raw
+  changed_when: false
+  check_mode: false
+
+- name: Read the target Firefox version
+  ansible.builtin.command:
+    cmd: firefox --version
+  register: firefox_target_version_raw
+  changed_when: false
+  check_mode: false
+
+- name: Set the initial Firefox versions
+  ansible.builtin.set_fact:
+    firefox_source_version: "{{ firefox_source_version_raw.stdout | regex_search('([0-9]+\\.[0-9]+)') }}"
+    firefox_target_version: "{{ firefox_target_version_raw.stdout | regex_search('([0-9]+\\.[0-9]+)') }}"
+
+- name: Try to install the source Firefox version on the target
+  ansible.builtin.dnf:
+    name: "firefox-{{ firefox_source_version }}"
+    state: present
+  become: true
+  register: firefox_target_exact_update
+  failed_when: false
+  when:
+    - firefox_source_version is version(firefox_target_version, '>')
+
+- name: Try to install the target Firefox version on the control host
+  ansible.builtin.dnf:
+    name: "firefox-{{ firefox_target_version }}"
+    state: present
+  delegate_to: localhost
+  become: true
+  register: firefox_source_exact_update
+  failed_when: false
+  when:
+    - firefox_target_version is version(firefox_source_version, '>')
+
+- name: Read the source Firefox version after the exact update attempt
+  ansible.builtin.command:
+    cmd: firefox --version
+  delegate_to: localhost
+  become: false
+  register: firefox_source_version_after_exact_raw
+  changed_when: false
+  check_mode: false
+
+- name: Read the target Firefox version after the exact update attempt
+  ansible.builtin.command:
+    cmd: firefox --version
+  register: firefox_target_version_after_exact_raw
+  changed_when: false
+  check_mode: false
+
+- name: Set the Firefox versions after the exact update attempt
+  ansible.builtin.set_fact:
+    firefox_source_version_after_exact: "{{ firefox_source_version_after_exact_raw.stdout | regex_search('([0-9]+\\.[0-9]+)') }}"
+    firefox_target_version_after_exact: "{{ firefox_target_version_after_exact_raw.stdout | regex_search('([0-9]+\\.[0-9]+)') }}"
+
+- name: Update Firefox on the target to the latest version
+  ansible.builtin.dnf:
+    name: firefox
+    state: latest
+  become: true
+  register: firefox_target_latest_update
+  failed_when: false
+  when: firefox_source_version_after_exact != firefox_target_version_after_exact
+
+- name: Update Firefox on the control host to the latest version
+  ansible.builtin.dnf:
+    name: firefox
+    state: latest
+  delegate_to: localhost
+  become: true
+  register: firefox_source_latest_update
+  failed_when: false
+  when: firefox_source_version_after_exact != firefox_target_version_after_exact
+
+- name: Read the final source Firefox version
+  ansible.builtin.command:
+    cmd: firefox --version
+  delegate_to: localhost
+  become: false
+  register: firefox_source_version_final_raw
+  changed_when: false
+  check_mode: false
+
+- name: Read the final target Firefox version
+  ansible.builtin.command:
+    cmd: firefox --version
+  register: firefox_target_version_final_raw
+  changed_when: false
+  check_mode: false
+
+- name: Set the final Firefox versions
+  ansible.builtin.set_fact:
+    firefox_source_version_final: "{{ firefox_source_version_final_raw.stdout | regex_search('([0-9]+\\.[0-9]+)') }}"
+    firefox_target_version_final: "{{ firefox_target_version_final_raw.stdout | regex_search('([0-9]+\\.[0-9]+)') }}"
+
+- name: Require matching Firefox versions
+  ansible.builtin.assert:
+    that:
+      - firefox_source_version_final == firefox_target_version_final
+    fail_msg: "Firefox versions differ: source {{ firefox_source_version_final }}, target {{ firefox_target_version_final }}. Update both hosts to the same version and rerun."
+
+- name: Ensure the target .mozilla directory
+  ansible.builtin.file:
+    path: "{{ firefox_target_root | dirname }}"
+    state: directory
+    mode: "0700"
+
+- name: Check the target Firefox profile root
+  ansible.builtin.stat:
+    path: "{{ firefox_target_root }}"
+  register: firefox_target_root_stat
+
+- name: Back up the target Firefox profiles
+  ansible.builtin.command:
+    argv:
+      - mv
+      - "{{ firefox_target_root }}"
+      - "{{ firefox_backup_dir }}"
+    creates: "{{ firefox_backup_dir }}"
+  when: firefox_target_root_stat.stat.exists
+
+- name: Install rsync on the target
+  ansible.builtin.dnf:
+    name: rsync
+    state: present
+  become: true
+
+- name: Check rsync on the control host
+  ansible.builtin.command:
+    cmd: rsync --version
+  delegate_to: localhost
+  become: false
+  changed_when: false
+  check_mode: false
+
+- name: Copy the Firefox profiles to the target
+  ansible.posix.synchronize:
+    src: "{{ firefox_source_root }}/"
+    dest: "{{ firefox_target_root }}/"
+    mode: push
+    archive: true
+    owner: false
+    group: false
+    perms: true
+    links: true
+    delete: false
+    compress: true
+    rsync_opts: "{{ firefox_rsync_excludes }}"
+
+- name: Ensure the target Firefox profile root mode
+  ansible.builtin.file:
+    path: "{{ firefox_target_root }}"
+    state: directory
+    mode: "0700"
+
+- name: Check the target profile and metadata paths
+  ansible.builtin.stat:
+    path: "{{ firefox_target_root }}/{{ item }}"
+  loop: "{{ firefox_profile_dirs + ['profiles.ini', 'installs.ini', firefox_profile_groups_dir] }}"
+  loop_control:
+    label: "{{ item }}"
+  register: firefox_target_paths
+
+- name: Require the target profile and metadata paths
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists | default(false)
+    fail_msg: "Missing target Firefox path {{ item.item }}."
+  loop: "{{ firefox_target_paths.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check the target Profile Groups database
+  ansible.builtin.stat:
+    path: "{{ firefox_profile_groups_db }}"
+  register: firefox_target_profile_groups_db_stat
+
+- name: Require the target Profile Groups database
+  ansible.builtin.assert:
+    that:
+      - firefox_target_profile_groups_db_stat.stat.exists | default(false)
+    fail_msg: "Missing {{ firefox_profile_groups_db }}."
+
+- name: Check the target Profile Groups database for source paths
+  ansible.builtin.command:
+    argv:
+      - grep
+      - -a
+      - -q
+      - -F
+      - "{{ firefox_source_home }}"
+      - "{{ firefox_profile_groups_db }}"
+  register: firefox_target_profile_groups_source_paths
+  changed_when: false
+  failed_when: false
+
+- name: Require no source paths in the target Profile Groups database
+  ansible.builtin.assert:
+    that:
+      - firefox_target_profile_groups_source_paths.rc != 0
+    fail_msg: "The target Profile Groups database still contains {{ firefox_source_home }} paths."
+
+- name: Set up the Firefox repositories on the target
+  ansible.builtin.pause:
+    prompt: |
+      Set up the Firefox repositories for "{{ item }}" on the target, then press Enter:
+
+        cd "{{ firefox_target_root }}/{{ item }}"
+        if [ -d chrome/.git ]; then
+          git -C chrome remote set-url origin {{ firefox_csshacks_repo }}
+          git -C chrome pull --ff-only
+        else
+          git clone --branch {{ firefox_repo_branch }} {{ firefox_csshacks_repo }} chrome
+        fi
+        if [ -d user.js-repo/.git ]; then
+          git -C user.js-repo remote set-url origin {{ firefox_userjs_repo }}
+          git -C user.js-repo pull --ff-only
+        else
+          git clone --branch {{ firefox_repo_branch }} {{ firefox_userjs_repo }} user.js-repo
+        fi
+  loop: "{{ firefox_active_profiles }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Set the target repository paths
+  ansible.builtin.set_fact:
+    firefox_target_repo_paths: "{{ firefox_active_profiles | product(['chrome', 'user.js-repo']) | list }}"
+
+- name: Check the target repository directories
+  ansible.builtin.stat:
+    path: "{{ firefox_target_root }}/{{ item.0 }}/{{ item.1 }}/.git"
+  loop: "{{ firefox_target_repo_paths }}"
+  loop_control:
+    label: "{{ item.0 }}/{{ item.1 }}"
+  register: firefox_target_repo_dirs
+
+- name: Require the target repository directories
+  ansible.builtin.assert:
+    that:
+      - item.stat.isdir | default(false)
+    fail_msg: "Missing git repository {{ item.item.0 }}/{{ item.item.1 }}."
+  loop: "{{ firefox_target_repo_dirs.results }}"
+  loop_control:
+    label: "{{ item.item.0 }}/{{ item.item.1 }}"
+
+- name: Read the target repository remote URLs
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ firefox_target_root }}/{{ item.0 }}/{{ item.1 }}"
+      - remote
+      - get-url
+      - origin
+  loop: "{{ firefox_target_repo_paths }}"
+  loop_control:
+    label: "{{ item.0 }}/{{ item.1 }}"
+  register: firefox_target_repo_remotes
+  changed_when: false
+  failed_when: false
+
+- name: Require the github.com-cy repository remotes
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - (item.item.1 == 'chrome' and 'firefox-csshacks' in item.stdout and 'github.com-cy' in item.stdout) or (item.item.1 == 'user.js-repo' and 'sebstec/user.js' in item.stdout and 'github.com-cy' in item.stdout)
+    fail_msg: "Unexpected remote for {{ item.item.0 }}/{{ item.item.1 }}: {{ item.stdout | default('') }}"
+  loop: "{{ firefox_target_repo_remotes.results }}"
+  loop_control:
+    label: "{{ item.item.0 }}/{{ item.item.1 }}"
+
+- name: Read the target repository branches
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ firefox_target_root }}/{{ item.0 }}/{{ item.1 }}"
+      - rev-parse
+      - --abbrev-ref
+      - HEAD
+  loop: "{{ firefox_target_repo_paths }}"
+  loop_control:
+    label: "{{ item.0 }}/{{ item.1 }}"
+  register: firefox_target_repo_branches
+  changed_when: false
+  failed_when: false
+
+- name: Require the master repository branches
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - (item.stdout | trim) == firefox_repo_branch
+    fail_msg: "Expected branch {{ firefox_repo_branch }} for {{ item.item.0 }}/{{ item.item.1 }}."
+  loop: "{{ firefox_target_repo_branches.results }}"
+  loop_control:
+    label: "{{ item.item.0 }}/{{ item.item.1 }}"
+
+- name: Read the target repository statuses
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ firefox_target_root }}/{{ item.0 }}/{{ item.1 }}"
+      - status
+      - --porcelain
+  loop: "{{ firefox_target_repo_paths }}"
+  loop_control:
+    label: "{{ item.0 }}/{{ item.1 }}"
+  register: firefox_target_repo_statuses
+  changed_when: false
+  failed_when: false
+
+- name: Require clean target repositories
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - item.stdout == ""
+    fail_msg: "The target repository {{ item.item.0 }}/{{ item.item.1 }} is dirty."
+  loop: "{{ firefox_target_repo_statuses.results }}"
+  loop_control:
+    label: "{{ item.item.0 }}/{{ item.item.1 }}"
+
+- name: Check the target user-overrides.js entries
+  ansible.builtin.stat:
+    path: "{{ firefox_target_root }}/{{ item }}/user-overrides.js"
+    follow: false
+  loop: "{{ firefox_active_profiles }}"
+  loop_control:
+    label: "{{ item }}"
+  register: firefox_target_user_overrides
+
+- name: Require user-overrides.js to be absent or a symlink
+  ansible.builtin.assert:
+    that:
+      - (not item.stat.exists) or (item.stat.islnk | default(false))
+    fail_msg: "{{ item.item }}/user-overrides.js exists as a regular file; back it up or remove it before rerunning."
+  loop: "{{ firefox_target_user_overrides.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Link user-overrides.js into the active profiles
+  ansible.builtin.file:
+    src: user.js-repo/user-overrides.js
+    dest: "{{ firefox_target_root }}/{{ item }}/user-overrides.js"
+    state: link
+    force: true
+  loop: "{{ firefox_active_profiles }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Read the user-overrides.js links
+  ansible.builtin.command:
+    argv:
+      - readlink
+      - "{{ firefox_target_root }}/{{ item }}/user-overrides.js"
+  loop: "{{ firefox_active_profiles }}"
+  loop_control:
+    label: "{{ item }}"
+  register: firefox_target_user_overrides_links
+  changed_when: false
+  failed_when: false
+
+- name: Require relative user-overrides.js links
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - (item.stdout | trim) == "user.js-repo/user-overrides.js"
+    fail_msg: "Expected a relative user.js-repo/user-overrides.js link in {{ item.item }}."
+  loop: "{{ firefox_target_user_overrides_links.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check the CSS customization preference
+  ansible.builtin.command:
+    argv:
+      - grep
+      - -H
+      - -E
+      - 'toolkit\.legacyUserProfileCustomizations\.stylesheets"[[:space:]]*,[[:space:]]*true'
+      - "{{ firefox_target_root }}/{{ item }}/prefs.js"
+      - "{{ firefox_target_root }}/{{ item }}/user.js"
+      - "{{ firefox_target_root }}/{{ item }}/user-overrides.js"
+  loop: "{{ firefox_active_profiles }}"
+  loop_control:
+    label: "{{ item }}"
+  register: firefox_css_pref
+  changed_when: false
+  failed_when: false
+
+- name: Require the CSS customization preference
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+    fail_msg: "toolkit.legacyUserProfileCustomizations.stylesheets is not enabled in {{ item.item }}."
+  loop: "{{ firefox_css_pref.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check the target profile root mode
+  ansible.builtin.stat:
+    path: "{{ firefox_target_root }}"
+  register: firefox_target_root_mode
+
+- name: Require target profile root mode 0700
+  ansible.builtin.assert:
+    that:
+      - firefox_target_root_mode.stat.mode == "0700"
+    fail_msg: "Expected {{ firefox_target_root }} to be mode 0700."
+
+- name: Show the Firefox migration result
+  ansible.builtin.debug:
+    msg:
+      - "Firefox profiles: {{ firefox_target_root }}"
+      - "Firefox version: {{ firefox_target_version_final }}"
+      - "Launch with: firefox -P"

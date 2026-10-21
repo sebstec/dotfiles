@@ -10,6 +10,8 @@
       tags: gnome_extensions
     - role: apps
       tags: apps
+    - role: firefox
+      tags: firefox
     - role: ssh
       tags: ssh
     - role: dotfiles

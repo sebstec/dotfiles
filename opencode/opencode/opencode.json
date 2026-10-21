@@ -4,6 +4,9 @@
         "/etc/opencode/AGENTS.md",
         "/etc/opencode/rules/*.md"
     ],
+    "plugins": [
+        "/etc/opencode/plugins/osc52"
+    ],
     "providers": {
         "openrouter": {
             "models": {

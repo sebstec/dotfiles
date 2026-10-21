@@ -6,6 +6,8 @@
       tags: base
     - role: docker
       tags: docker
+    - role: iptables
+      tags: iptables
     - role: gnome_extensions
       tags: gnome_extensions
     - role: apps

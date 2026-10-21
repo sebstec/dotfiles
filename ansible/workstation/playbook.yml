@@ -14,8 +14,10 @@
       tags: apps
     - role: firefox
       tags: firefox
+      when: not (workstation_local | default(false))
     - role: ssh
       tags: ssh
+      when: not (workstation_local | default(false))
     - role: dotfiles
       tags: dotfiles
     - role: zsh

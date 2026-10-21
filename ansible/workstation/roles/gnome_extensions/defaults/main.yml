@@ -58,6 +58,8 @@ gnome_workspace_settings:
   /org/gnome/mutter/dynamic-workspaces: "false"
   /org/gnome/desktop/wm/preferences/num-workspaces: "10"
 
+gnome_compose_key: "compose:rctrl"
+
 pop_shell_keybindings:
   activate-launcher: "@as []"
   pop-monitor-left: "['<Control><Super>h']"

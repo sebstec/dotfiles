@@ -357,6 +357,61 @@
     label: "{{ item.key }}"
   when: not ansible_check_mode
 
+- name: Read GNOME XKB options
+  community.general.dconf:
+    key: /org/gnome/desktop/input-sources/xkb-options
+    state: read
+  register: gnome_xkb_options
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Parse GNOME XKB options
+  ansible.builtin.set_fact:
+    gnome_xkb_options_current: "{{ (gnome_xkb_options.value | default('[]', true) | regex_replace('^@as ', '')) | from_yaml }}"
+  when: not ansible_check_mode
+
+- name: Default GNOME XKB options in check mode
+  ansible.builtin.set_fact:
+    gnome_xkb_options_current: []
+  when: ansible_check_mode
+
+- name: Merge the GNOME Compose key
+  ansible.builtin.set_fact:
+    gnome_xkb_options_merged: "{{ ((gnome_xkb_options_current | reject('match', '^compose:') | list) + [gnome_compose_key]) | unique | list }}"
+
+- name: Configure the GNOME Compose key
+  community.general.dconf:
+    key: /org/gnome/desktop/input-sources/xkb-options
+    value: "{{ gnome_xkb_options_merged | string }}"
+  when: not ansible_check_mode
+
+- name: Read GNOME XKB options for verification
+  community.general.dconf:
+    key: /org/gnome/desktop/input-sources/xkb-options
+    state: read
+  register: gnome_xkb_options_verify
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Parse the GNOME XKB options for verification
+  ansible.builtin.set_fact:
+    gnome_xkb_options_verify_list: "{{ (gnome_xkb_options_verify.value | default('[]', true) | regex_replace('^@as ', '')) | from_yaml }}"
+  when: not ansible_check_mode
+
+- name: Verify the GNOME Compose key
+  ansible.builtin.assert:
+    that:
+      - gnome_compose_key in gnome_xkb_options_verify_list
+    fail_msg: "Expected {{ gnome_compose_key }} in the GNOME XKB options."
+  when: not ansible_check_mode
+
+- name: Verify there is no conflicting GNOME Compose key
+  ansible.builtin.assert:
+    that:
+      - (gnome_xkb_options_verify_list | select('match', '^compose:') | list) == [gnome_compose_key]
+    fail_msg: "Expected only {{ gnome_compose_key }} among the GNOME XKB Compose options."
+  when: not ansible_check_mode
+
 - name: Read GNOME window manager keybindings for verification
   community.general.dconf:
     key: "/org/gnome/desktop/wm/keybindings/{{ item.key }}"

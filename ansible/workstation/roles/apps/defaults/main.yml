@@ -15,6 +15,9 @@ apps_dnf_packages:
   - dnf5-plugins
   - python3-psutil
   - python3-gobject
+  - texlive
+  - texlive-marvosym
+  - latexmk
 
 apps_flatpak_remote: flathub
 apps_flatpak_remote_url: https://flathub.org/repo/flathub.flatpakrepo

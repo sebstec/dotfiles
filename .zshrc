@@ -329,8 +329,6 @@ setup_git_prompt() {
 
 }
 
-alias protonvpn='protonvpn-cli'
-alias pvpn='protonvpn-cli'
 alias ch311='wg-quick up ch311'
 alias ch311d='wg-quick down ch311'
 alias ch322='wg-quick up ch322'

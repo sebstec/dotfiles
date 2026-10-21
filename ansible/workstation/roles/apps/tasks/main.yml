@@ -17,11 +17,175 @@
     state: present
   become: true
 
+- name: Import the Brave GPG key
+  ansible.builtin.rpm_key:
+    key: "{{ brave_gpg_key_url }}"
+    state: present
+  become: true
+
+- name: Add the Brave repository
+  ansible.builtin.command:
+    argv:
+      - dnf
+      - config-manager
+      - addrepo
+      - --from-repofile
+      - "{{ brave_repo_url }}"
+    creates: "{{ brave_repo_file }}"
+  become: true
+
+- name: Check the Brave repository file
+  ansible.builtin.stat:
+    path: "{{ brave_repo_file }}"
+  register: brave_repo_file_stat
+
+- name: Require the Brave repository file
+  ansible.builtin.assert:
+    that:
+      - brave_repo_file_stat.stat.exists | default(false)
+    fail_msg: "dnf config-manager did not create {{ brave_repo_file }}."
+  when: not ansible_check_mode
+
+- name: Install Brave
+  ansible.builtin.dnf:
+    name: brave-browser
+    state: present
+    update_cache: true
+  become: true
+  when: (not ansible_check_mode) or (brave_repo_file_stat.stat.exists | default(false))
+
+- name: Ensure the Brave managed policy directory
+  ansible.builtin.file:
+    path: "{{ brave_policy_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Configure Brave managed policies
+  ansible.builtin.copy:
+    dest: "{{ brave_policy_file }}"
+    content: "{{ brave_policies | to_nice_json }}\n"
+    mode: "0644"
+  become: true
+
+- name: Read the Brave managed policies
+  ansible.builtin.slurp:
+    src: "{{ brave_policy_file }}"
+  register: brave_policy_contents
+  when: not ansible_check_mode
+
+- name: Parse the Brave managed policies
+  ansible.builtin.set_fact:
+    brave_policy_values: "{{ brave_policy_contents.content | b64decode | from_json }}"
+  when: not ansible_check_mode
+
+- name: Verify the Brave managed policies
+  ansible.builtin.assert:
+    that:
+      - brave_policy_values.BraveRewardsDisabled == true
+      - brave_policy_values.BraveWalletDisabled == true
+      - "'BraveShieldsDisabledForUrls' not in brave_policy_values"
+      - "'BraveShieldsEnabledForUrls' not in brave_policy_values"
+    fail_msg: "Brave policies are incomplete or contain a Shields override."
+  when: not ansible_check_mode
+
+- name: Check the Brave installation
+  ansible.builtin.command:
+    cmd: rpm -q brave-browser
+  register: brave_installed
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: Require Brave to be installed
+  ansible.builtin.assert:
+    that:
+      - brave_installed.rc == 0
+    fail_msg: "brave-browser is not installed."
+  when: not ansible_check_mode
+
+- name: Remind to restart Brave and verify policies
+  ansible.builtin.debug:
+    msg:
+      - "Restart Brave, then check brave://policy, brave://management, brave://settings/rewards, and brave://wallet."
+      - "Brave Rewards and Wallet are disabled; other New Tab widgets and Shields remain at their defaults."
+
 - name: Ensure the download directory
   ansible.builtin.file:
     path: "{{ apps_download_dir }}"
     state: directory
     mode: "0700"
+
+- name: Download the Proton VPN release repository package
+  ansible.builtin.get_url:
+    url: "{{ protonvpn_release_url }}"
+    dest: "{{ protonvpn_release_rpm }}"
+    mode: "0644"
+  when: not ansible_check_mode
+
+- name: Import the Proton VPN public key
+  ansible.builtin.rpm_key:
+    key: "{{ protonvpn_public_key_url }}"
+    state: present
+  become: true
+
+- name: Install the Proton VPN release repository
+  ansible.builtin.dnf:
+    name: "{{ protonvpn_release_rpm }}"
+    state: present
+  become: true
+  when: not ansible_check_mode
+
+- name: Refresh DNF metadata after adding the Proton VPN repository
+  ansible.builtin.command:
+    cmd: dnf makecache --refresh
+  become: true
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Install Proton VPN
+  ansible.builtin.dnf:
+    name: proton-vpn-gnome-desktop
+    state: present
+    update_cache: true
+  become: true
+  when: not ansible_check_mode
+
+- name: Check the Proton VPN installation
+  ansible.builtin.command:
+    cmd: rpm -q proton-vpn-gnome-desktop
+  register: protonvpn_installed
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: Require Proton VPN to be installed
+  ansible.builtin.assert:
+    that:
+      - protonvpn_installed.rc == 0
+    fail_msg: "Proton VPN is not installed."
+  when: not ansible_check_mode
+
+- name: Check the Proton VPN CLI
+  ansible.builtin.command:
+    cmd: which protonvpn
+  register: protonvpn_cli
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: Require the Proton VPN CLI
+  ansible.builtin.assert:
+    that:
+      - protonvpn_cli.rc == 0
+    fail_msg: "The protonvpn CLI is not available."
+  when: not ansible_check_mode
+
+- name: Remind to sign in to Proton VPN
+  ansible.builtin.debug:
+    msg:
+      - "Sign in to Proton VPN manually."
+      - "The tray icon requires the AppIndicator extension; log out and back in if it does not appear."
 
 - name: Ensure the tarApps directory
   ansible.builtin.file:

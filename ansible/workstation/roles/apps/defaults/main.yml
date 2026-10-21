@@ -5,11 +5,14 @@ apps_dnf_packages:
   - thunderbird
   - flameshot
   - gimp
+  - libreoffice
   - flatpak
   - fuse-libs
   - libsecret
+  - libappindicator-gtk3
   - dconf
   - dbus-tools
+  - dnf5-plugins
   - python3-psutil
   - python3-gobject
 
@@ -22,6 +25,7 @@ apps_flatpak_packages:
   - org.inkscape.Inkscape
   - com.bitwarden.desktop
   - com.github.tchx84.Flatseal
+  - org.videolan.VLC
 
 thunderbird_wayland_env_file: "{{ workstation_home }}/.config/environment.d/50-thunderbird-wayland.conf"
 
@@ -54,3 +58,17 @@ proton_drive_cli_url: "https://proton.me/download/drive/cli/{{ proton_drive_cli_
 proton_drive_cli_checksum: "sha512:3533025ba69ae112b64e3e01fbcc1ad0688136a4043f6cf6a72886967d85fdcd9ec235479c2e113171614be5225bfba93427509a05ca5aa6071d924fa7e91ca8"
 proton_drive_cli_archive: "{{ apps_download_dir }}/proton-drive-{{ proton_drive_cli_version }}"
 proton_drive_cli_dest: /usr/local/bin/proton-drive
+
+brave_repo_url: https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+brave_repo_file: /etc/yum.repos.d/brave-browser.repo
+brave_gpg_key_url: https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+brave_policy_dir: /etc/brave/policies/managed
+brave_policy_file: "{{ brave_policy_dir }}/ansible-brave.json"
+brave_policies:
+  BraveRewardsDisabled: true
+  BraveWalletDisabled: true
+
+protonvpn_release_version: "1.0.5-1"
+protonvpn_release_url: "https://repo.protonvpn.com/fedora-{{ ansible_facts['distribution_major_version'] }}-stable/protonvpn-stable-release/protonvpn-stable-release-{{ protonvpn_release_version }}.noarch.rpm"
+protonvpn_release_rpm: "{{ apps_download_dir }}/protonvpn-stable-release-{{ protonvpn_release_version }}.noarch.rpm"
+protonvpn_public_key_url: "https://repo.protonvpn.com/fedora-{{ ansible_facts['distribution_major_version'] }}-stable/public_key.asc"

@@ -56,7 +56,9 @@ Assume forbidden tools are unavailable. Do not probe; ask the user to run what y
 
 Use web search only for **specific factual questions** (API behavior, error messages, release notes) when local code/docs are insufficient.
 
-**Must ask the user before any web search.** State what you would search and why; wait for approval.
+**Must ask the user before the first web search in a session.** State what you would search and why; wait for approval.
+
+**Session consent.** The user may approve web search for the rest of the session, either explicitly ("search as needed for this task") or in response to a search request. Once granted, follow-up searches that serve the same task may run without asking again. Consent does not carry over to a different task or a new topic, and it ends when the user revokes it or says to ask again. When the task changes, ask once more before the first search of the new task.
 
 ## When something needs a forbidden tool
 

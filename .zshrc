@@ -303,7 +303,7 @@ setup_git_prompt() {
 
     local git_status_dirty git_status_stash git_branch
 
-    if [ "$(git --no-optional-locks status --untracked-files='no' --porcelain)" ]; then
+    if [ "$(git status --untracked-files='no' --porcelain)" ]; then
         git_status_dirty='%F{red}*'
     else
         unset git_status_dirty
@@ -374,3 +374,4 @@ zle -N zle-keymap-select
 #farbe home: 044, farbe arbeit: 056
 alias docker='sudo docker'
 alias vis="$HOME/setup/kickstart.nvim/vis.sh"
+alias sec="python3 -c \"import secrets; print(secrets.token_urlsafe(32))\""

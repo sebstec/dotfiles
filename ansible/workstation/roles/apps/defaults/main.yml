@@ -17,6 +17,8 @@ apps_dnf_packages:
   - python3-gobject
   - texlive
   - texlive-marvosym
+  - texlive-babel-german
+  - texlive-hyphen-german
   - latexmk
 
 apps_flatpak_remote: flathub

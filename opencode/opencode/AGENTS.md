@@ -23,7 +23,8 @@ The authoritative detailed list is `/etc/opencode/rules/forbidden_commands.md`. 
 
 - Tell the user the required command and provide drafted arguments or body instead of running a forbidden tool.
 - Prefer editor/read/write tools when sufficient. Do not use shell for builds, deploys, permission changes, or project workflows.
-- Ask the user before every web search. State the exact search and reason, then wait for approval. Search only specific factual questions when local sources are insufficient.
+- Ask the user before the first web search in a session. State the exact search and reason, then wait for approval. Search only specific factual questions when local sources are insufficient.
+- The user may grant consent for the rest of the session. With session consent, later searches need no further approval as long as they are direct follow-ups to the task at hand. Start a new approval cycle when the task changes, the topic drifts, or the user revokes consent.
 
 ## Failure Logging
 

@@ -1,3 +1,4 @@
+# ansible-playbook playbook.yml -i inventory/localhost.yml -u sbw -K --diff --tags apps --check
 - name: Provision Fedora workstation
   hosts: workstation
   gather_facts: true

@@ -357,6 +357,30 @@
     label: "{{ item.key }}"
   when: not ansible_check_mode
 
+- name: Read GNOME hot corner setting
+  ansible.builtin.command:
+    argv:
+      - gsettings
+      - get
+      - org.gnome.desktop.interface
+      - enable-hot-corners
+  register: gnome_hot_corners_current
+  changed_when: false
+  check_mode: false
+  when: not ansible_check_mode
+
+- name: Disable GNOME hot corners
+  ansible.builtin.command:
+    argv:
+      - gsettings
+      - set
+      - org.gnome.desktop.interface
+      - enable-hot-corners
+      - "false"
+  when:
+    - not ansible_check_mode
+    - gnome_hot_corners_current.stdout | trim == "true"
+
 - name: Read GNOME XKB options
   community.general.dconf:
     key: /org/gnome/desktop/input-sources/xkb-options
@@ -494,6 +518,24 @@
   loop: "{{ (gnome_workspace_settings_verify | default({})).get('results', []) }}"
   loop_control:
     label: "{{ item.item.key }}"
+  when: not ansible_check_mode
+
+- name: Read GNOME hot corner setting for verification
+  ansible.builtin.command:
+    argv:
+      - gsettings
+      - get
+      - org.gnome.desktop.interface
+      - enable-hot-corners
+  register: gnome_hot_corners_verify
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify GNOME hot corners are disabled
+  ansible.builtin.assert:
+    that:
+      - gnome_hot_corners_verify.stdout | trim == "false"
+    fail_msg: "Expected GNOME hot corners to be disabled."
   when: not ansible_check_mode
 
 - name: Read enabled GNOME extensions for verification

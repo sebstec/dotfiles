@@ -3,7 +3,7 @@ daheim="044"
 arbeit="056"
 
 case "$HOSTNAME" in
-    sbfedh0)
+    sbfedh*)
         color=$daheim
         ;;
     sbfedw*)

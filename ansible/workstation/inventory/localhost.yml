@@ -6,3 +6,9 @@ all:
       ansible_user: sbw
       ansible_python_interpreter: /usr/bin/python3
       workstation_local: true
+    homestation:
+      ansible_connection: local
+      ansible_host: localhost
+      ansible_user: sbf
+      ansible_python_interpreter: /usr/bin/python3
+      workstation_local: true
